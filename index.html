@@ -721,8 +721,9 @@
         `;
       } else if(a.status==='cancelado'){
         actions = `<button class="icon-btn" title="Excluir" data-delete-appt="${a.id}">${ICONS.trash}</button>`;
-      } else if(a.status==='concluido' && (a.paymentStatus==='pendente' || a.paymentStatus==='parcial')){
-        actions = `<button class="btn btn-primary btn-sm" data-register-payment="${a.id}">Registrar pagamento</button>`;
+      } else if(a.status==='concluido'){
+        const payBtn = (a.paymentStatus==='pendente' || a.paymentStatus==='parcial') ? `<button class="btn btn-primary btn-sm" data-register-payment="${a.id}">Registrar pagamento</button>` : '';
+        actions = `<button class="icon-btn" title="Corrigir dados" data-edit-client-data="${a.id}">${ICONS.edit}</button>${payBtn}`;
       }
       return `<div class="item-card appt-row">
         <div class="appt-time tabular">${esc(a.time||'--:--')}</div>
@@ -912,6 +913,31 @@
     const pending = allReceivables();
     const totalReceivable = pending.reduce((s,x) => s + Math.max(0, x.total - x.paid), 0);
 
+    // resumo mensal: comparação com o mês anterior
+    const prevMonth = shiftMonth(ui.month, -1);
+    const prevTx = state.financeiro.filter(t => (t.date||'').slice(0,7) === prevMonth);
+    const prevReceitas = prevTx.filter(t=>t.type==='receita').reduce((s,t)=>s+Number(t.amount||0),0);
+    const prevDespesas = prevTx.filter(t=>t.type==='despesa').reduce((s,t)=>s+Number(t.amount||0),0);
+    const prevSaldo = prevReceitas - prevDespesas;
+    const pctLabel = (curr, prev) => {
+      if(!prev) return curr>0 ? '' : '';
+      const pct = Math.round(((curr-prev)/Math.abs(prev))*100);
+      const arrow = pct>0 ? '▲' : pct<0 ? '▼' : '—';
+      const color = pct>0 ? 'var(--success)' : pct<0 ? 'var(--danger)' : 'var(--ink-faint)';
+      return ` <span style="font-size:11.5px;color:${color};font-weight:600;">${arrow} ${Math.abs(pct)}%</span>`;
+    };
+    const monthLabel = new Date(ui.month+'-01T00:00:00').toLocaleDateString('pt-BR',{month:'long', year:'numeric'});
+    const prevMonthLabel = new Date(prevMonth+'-01T00:00:00').toLocaleDateString('pt-BR',{month:'long', year:'numeric'});
+    const summaryBlock = (prevTx.length || monthTx.length) ? `
+      <div class="card" style="padding:16px 20px;margin-bottom:18px;">
+        <div style="font-size:12px;color:var(--ink-faint);text-transform:capitalize;margin-bottom:6px;">Resumo de ${monthLabel} vs. ${prevMonthLabel}</div>
+        <div style="display:flex;gap:24px;flex-wrap:wrap;font-size:13.5px;">
+          <div>Receitas: <b class="tabular">${fmtMoney(receitas)}</b>${pctLabel(receitas, prevReceitas)}</div>
+          <div>Despesas: <b class="tabular">${fmtMoney(despesas)}</b>${pctLabel(despesas, prevDespesas)}</div>
+          <div>Saldo: <b class="tabular" style="color:${saldo>=0?'var(--success)':'var(--danger)'}">${fmtMoney(saldo)}</b>${pctLabel(saldo, prevSaldo)}</div>
+        </div>
+      </div>` : '';
+
     const rows = monthTx.map(t => {
       const sign = t.type==='receita' ? '+' : '−';
       return `<div class="tx-row divider-row">
@@ -920,7 +946,7 @@
           <div class="tx-date">${fmtDate(t.date)} · <span class="badge ${t.source==='auto'?'badge-auto':'badge-manual'}">${t.source==='auto'?'Automático':'Manual'}</span></div>
         </div>
         <div class="tx-amount tabular ${t.type==='receita'?'pos':'neg'}">${sign} ${fmtMoney(t.amount)}</div>
-        <div style="width:34px;">${t.source==='manual'?`<button class="icon-btn" data-delete-tx="${t.id}">${ICONS.trash}</button>`:''}</div>
+        <div style="width:64px;display:flex;gap:4px;justify-content:flex-end;">${t.source==='manual'?`<button class="icon-btn" title="Editar" data-edit-tx="${t.id}">${ICONS.edit}</button><button class="icon-btn" title="Excluir" data-delete-tx="${t.id}">${ICONS.trash}</button>`:''}</div>
       </div>`;
     }).join('');
 
@@ -943,6 +969,7 @@
         <div class="stat-tile"><div class="label">Saldo</div><div class="value tabular" style="color:${saldo>=0?'var(--success)':'var(--danger)'}">${fmtMoney(saldo)}</div></div>
         <div class="stat-tile warn"><div class="label">A receber</div><div class="value tabular">${fmtMoney(totalReceivable)}</div></div>
       </div>
+      ${summaryBlock}
       ${receivablesBlock(pending)}
       ${list}
     `;
@@ -951,6 +978,25 @@
   function receivablesBlock(pending){
     if(!pending || !pending.length) return '';
     const t = todayISO();
+    const byClient = {};
+    pending.forEach(x => {
+      const saldo = Math.max(0, x.total - x.paid);
+      if(!byClient[x.clientName]) byClient[x.clientName] = { total:0, count:0 };
+      byClient[x.clientName].total += saldo;
+      byClient[x.clientName].count += 1;
+    });
+    const multiClients = Object.entries(byClient).filter(([,v]) => v.count > 1).sort((a,b) => b[1].total - a[1].total);
+    const consolidatedBlock = multiClients.length ? `
+      <div style="margin-top:4px;margin-bottom:14px;">
+        <h3 style="font-size:13px;color:var(--ink-dim);margin:0 0 10px;font-family:'Work Sans',sans-serif;font-weight:600;text-transform:uppercase;letter-spacing:0.03em;">Total por cliente (mais de uma pendência)</h3>
+        <div class="card" style="overflow:hidden;">
+          ${multiClients.map(([name,v]) => `
+            <div class="tx-row divider-row">
+              <div class="tx-desc">${esc(name)} <span style="color:var(--ink-faint);">· ${v.count} pendências</span></div>
+              <div class="tx-amount tabular neg">${fmtMoney(v.total)}</div>
+            </div>`).join('')}
+        </div>
+      </div>` : '';
     const rows = pending.slice().sort((a,b) => (a.dueDate||a.refDate).localeCompare(b.dueDate||b.refDate)).map(x => {
       const saldo = Math.max(0, x.total - x.paid);
       const due = x.dueDate || '';
@@ -968,6 +1014,7 @@
       </div>`;
     }).join('');
     return `
+      ${consolidatedBlock}
       <div style="margin-top:4px;margin-bottom:24px;">
         <h3 style="font-size:13px;color:var(--ink-dim);margin:0 0 10px;font-family:'Work Sans',sans-serif;font-weight:600;text-transform:uppercase;letter-spacing:0.03em;">A receber</h3>
         <div class="card" style="overflow:hidden;">${rows}</div>
@@ -1031,6 +1078,7 @@
       document.querySelectorAll('[data-complete-appt]').forEach(b => b.onclick = () => completeAppointment(b.dataset.completeAppt));
       document.querySelectorAll('[data-delete-appt]').forEach(b => b.onclick = () => confirmModal('Excluir este agendamento cancelado?', () => db.collection('appointments').doc(b.dataset.deleteAppt).delete()));
       document.querySelectorAll('[data-register-payment]').forEach(b => b.onclick = () => openRegisterPaymentModal(state.appointments.find(a=>a.id===b.dataset.registerPayment)));
+      document.querySelectorAll('[data-edit-client-data]').forEach(b => b.onclick = () => openEditClientDataModal(state.appointments.find(a=>a.id===b.dataset.editClientData)));
       document.querySelectorAll('[data-goto]').forEach(b => b.onclick = () => {
         if(b.dataset.goto === 'catalog-produtos'){ ui.tab='catalog'; ui.sub='produtos'; }
         else if(b.dataset.goto === 'backup'){ ui.tab='backup'; }
@@ -1063,6 +1111,7 @@
       const monthInput = document.getElementById('monthInput');
       monthInput.onchange = () => { ui.month = monthInput.value || monthISO(); renderAll(); };
       document.getElementById('newTxBtn').onclick = () => openTransactionModal();
+      document.querySelectorAll('[data-edit-tx]').forEach(b => b.onclick = () => openTransactionModal(state.financeiro.find(t=>t.id===b.dataset.editTx)));
       document.querySelectorAll('[data-delete-tx]').forEach(b => b.onclick = () => confirmModal('Excluir este lançamento?', () => db.collection('financeiro').doc(b.dataset.deleteTx).delete()));
       document.querySelectorAll('[data-register-payment]').forEach(b => b.onclick = () => openRegisterPaymentModal(state.appointments.find(a=>a.id===b.dataset.registerPayment)));
       document.querySelectorAll('[data-register-dose-payment]').forEach(b => b.onclick = () => openRegisterDosePaymentModal(state.doseLots.find(l=>l.id===b.dataset.registerDosePayment)));
@@ -1085,6 +1134,11 @@
     const d = new Date(iso+'T00:00:00');
     d.setDate(d.getDate()+delta);
     return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+  }
+  function shiftMonth(yyyymm, delta){
+    const [y,m] = yyyymm.split('-').map(Number);
+    const d = new Date(y, m-1+delta, 1);
+    return `${d.getFullYear()}-${pad(d.getMonth()+1)}`;
   }
 
   /* ================= MODALS ================= */
@@ -1525,23 +1579,50 @@
     };
   }
 
+  /* ---- Corrigir dados (atendimento já concluído) ---- */
+  function openEditClientDataModal(a){
+    openModal(`
+      <h2>Corrigir dados do atendimento</h2>
+      <p style="color:var(--ink-dim);margin:0 0 16px;">${esc(a.serviceName)} · ${fmtDate(a.date)}${a.time?` ${esc(a.time)}`:''}</p>
+      <div class="field"><label for="ecName">Cliente</label><input type="text" id="ecName" value="${esc(a.clientName||'')}" placeholder="Nome do cliente"></div>
+      <div class="field"><label for="ecPhone">Telefone (opcional)</label><input type="tel" id="ecPhone" value="${esc(a.clientPhone||'')}" placeholder="(00) 00000-0000"></div>
+      <div class="field"><label for="ecNotes">Observações</label><textarea id="ecNotes" placeholder="Preferências, observações...">${esc(a.notes||'')}</textarea></div>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" id="ecCancel">Cancelar</button>
+        <button class="btn btn-primary" id="ecSave">Salvar</button>
+      </div>
+    `);
+    document.getElementById('ecCancel').onclick = closeModal;
+    document.getElementById('ecSave').onclick = () => {
+      const clientName = document.getElementById('ecName').value.trim();
+      if(!clientName) return;
+      db.collection('appointments').doc(a.id).update({
+        clientName,
+        clientPhone: document.getElementById('ecPhone').value.trim(),
+        notes: document.getElementById('ecNotes').value.trim(),
+      });
+      closeModal();
+    };
+  }
+
   /* ---- Transaction modal ---- */
-  function openTransactionModal(){
+  function openTransactionModal(existing){
     if(notReadyGuard()) return;
+    const isEdit = !!existing;
     const clientsMap = uniqueClientsMap();
     const clientOptions = Object.keys(clientsMap).map(name => `<option value="${esc(name)}"></option>`).join('');
     openModal(`
-      <h2>Novo lançamento</h2>
-      <div class="field"><label for="txType">Tipo</label><select id="txType"><option value="receita">Receita</option><option value="despesa">Despesa</option></select></div>
-      <div class="field"><label for="txDesc">Descrição</label><input type="text" id="txDesc" placeholder="Ex: Compra de óleo de massagem"></div>
+      <h2>${isEdit?'Editar lançamento':'Novo lançamento'}</h2>
+      <div class="field"><label for="txType">Tipo</label><select id="txType"><option value="receita" ${existing?.type!=='despesa'?'selected':''}>Receita</option><option value="despesa" ${existing?.type==='despesa'?'selected':''}>Despesa</option></select></div>
+      <div class="field"><label for="txDesc">Descrição</label><input type="text" id="txDesc" placeholder="Ex: Compra de óleo de massagem" value="${esc(existing?.description||'')}"></div>
       <div class="field" id="txClientField">
         <label for="txClient">Cliente (opcional)</label>
-        <input type="text" id="txClient" list="txClientList" placeholder="Nome da cliente" autocomplete="off">
+        <input type="text" id="txClient" list="txClientList" placeholder="Nome da cliente" autocomplete="off" value="${esc(existing?.clientName||'')}">
         <datalist id="txClientList">${clientOptions}</datalist>
       </div>
       <div class="field-row">
-        <div class="field"><label for="txAmount">Valor</label><input type="number" id="txAmount" min="0" step="0.01" placeholder="0,00"></div>
-        <div class="field"><label for="txDate">Data</label><input type="date" id="txDate" value="${todayISO()}"></div>
+        <div class="field"><label for="txAmount">Valor</label><input type="number" id="txAmount" min="0" step="0.01" placeholder="0,00" value="${existing?Number(existing.amount||0):''}"></div>
+        <div class="field"><label for="txDate">Data</label><input type="date" id="txDate" value="${existing?.date || todayISO()}"></div>
       </div>
       <div class="modal-actions">
         <button class="btn btn-ghost" id="txCancel">Cancelar</button>
@@ -1561,9 +1642,13 @@
       const date = document.getElementById('txDate').value;
       const clientName = type === 'receita' ? document.getElementById('txClient').value.trim() : '';
       if(!description || !(amount>0) || !date) return;
-      db.collection('financeiro').add({
-        type, description, amount, date, clientName, source:'manual', createdAt: Date.now(),
-      });
+      if(isEdit){
+        db.collection('financeiro').doc(existing.id).update({ type, description, amount, date, clientName });
+      } else {
+        db.collection('financeiro').add({
+          type, description, amount, date, clientName, source:'manual', createdAt: Date.now(),
+        });
+      }
       closeModal();
     };
   }
