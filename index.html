@@ -327,6 +327,7 @@
 </div>
 
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-check-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script>
 (function(){
@@ -498,6 +499,10 @@
 
   try{
     firebase.initializeApp(firebaseConfig);
+    try{
+      const appCheckProvider = new firebase.appCheck.ReCaptchaEnterpriseProvider('6Lcu774tAAAAALPoDtTgIkGLeg44pG8KINMeQF6p');
+      firebase.appCheck().activate(appCheckProvider, true);
+    }catch(e){ console.error('Falha ao iniciar o App Check', e); }
     const realDb = firebase.firestore();
     try{ realDb.enablePersistence({ synchronizeTabs: true }); }
     catch(e){ /* persistência offline indisponível neste navegador/aba — segue só online */ }
