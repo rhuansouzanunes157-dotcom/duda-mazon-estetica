@@ -1,3 +1,8 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
 <title>Duda Mazon Estética</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -297,6 +302,8 @@
     .field-row{ flex-direction:column; gap:0; }
   }
 </style>
+</head>
+<body>
 
 <div class="app-shell">
   <aside class="sidebar">
@@ -319,6 +326,8 @@
   <div class="modal" id="modalBox"></div>
 </div>
 
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script>
 (function(){
   "use strict";
@@ -407,17 +416,16 @@
     try{
       const raw = localStorage.getItem(STORAGE_KEY);
       if(raw) return JSON.parse(raw);
-    }catch(e){ console.warn('Armazenamento local indisponível', e); }
+    }catch(e){ console.warn('Cache local indisponível', e); }
     return null;
   }
   function saveStore(){
     try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(store)); }
-    catch(e){ console.warn('Não foi possível salvar os dados neste navegador', e); }
+    catch(e){ console.warn('Não foi possível salvar o cache local', e); }
   }
 
-  let store = loadStore() || seedExampleData();
+  let store = loadStore() || { services:[], products:[], appointments:[], financeiro:[], doseLots:[], meta:{} };
   if(!Array.isArray(store.doseLots)) store.doseLots = [];
-  saveStore();
 
   function syncAndRender(){
     state.services = store.services;
@@ -425,43 +433,92 @@
     state.appointments = store.appointments;
     state.financeiro = store.financeiro;
     state.doseLots = store.doseLots;
+    saveStore();
     renderAll();
   }
 
-  const localDb = {
-    collection(name){
-      return {
-        add(data){
-          const id = uid();
-          store[name].push(Object.assign({ id }, data));
-          saveStore(); syncAndRender();
-          return Promise.resolve({ id });
-        },
-        doc(id){
-          return {
-            update(data){
-              const idx = store[name].findIndex(d => d.id === id);
-              if(idx >= 0) store[name][idx] = Object.assign({}, store[name][idx], data);
-              saveStore(); syncAndRender();
-              return Promise.resolve();
-            },
-            delete(){
-              store[name] = store[name].filter(d => d.id !== id);
-              saveStore(); syncAndRender();
-              return Promise.resolve();
-            },
-          };
-        },
-        where(field, op, value){
-          const docs = store[name].filter(d => d[field] === value).map(d => ({ id:d.id }));
-          return { get(){ return Promise.resolve({ docs }); } };
-        },
-      };
-    },
+  /* ---------------- Firestore (banco de dados na nuvem) ---------------- */
+  const firebaseConfig = {
+    apiKey: "AIzaSyAjl0Fln-qByfYyvYeSpDoy7k635IBvoWU",
+    authDomain: "duda-mazon-estetica.firebaseapp.com",
+    projectId: "duda-mazon-estetica",
+    storageBucket: "duda-mazon-estetica.firebasestorage.app",
+    messagingSenderId: "991037385923",
+    appId: "1:991037385923:web:090d6ff884930aed500676"
   };
 
-  const db = localDb;
-  const dbReady = true;
+  const COLLECTIONS = ['services','products','appointments','financeiro','doseLots'];
+
+  function sanitizeForFirestore(obj){
+    if(Array.isArray(obj)) return obj.map(sanitizeForFirestore);
+    if(obj && typeof obj === 'object' && !(obj instanceof Date)){
+      const out = {};
+      Object.keys(obj).forEach(k => { if(obj[k] !== undefined) out[k] = sanitizeForFirestore(obj[k]); });
+      return out;
+    }
+    return obj;
+  }
+
+  function makeDb(realDb){
+    return {
+      collection(name){
+        const ref = realDb.collection(name);
+        return {
+          add(data){ return ref.add(sanitizeForFirestore(data)); },
+          doc(id){
+            const dref = ref.doc(id);
+            return {
+              update(data){ return dref.update(sanitizeForFirestore(data)); },
+              delete(){ return dref.delete(); },
+            };
+          },
+          where(field, op, value){ return ref.where(field, op, value); },
+        };
+      },
+    };
+  }
+
+  let db = null;
+  let dbReady = false;
+  let connError = false;
+  const readyFlags = {};
+
+  async function restoreFromBackup(parsed){
+    for(const name of COLLECTIONS){
+      const current = (store[name] || []).slice();
+      for(const d of current){ await db.collection(name).doc(d.id).delete(); }
+      const items = Array.isArray(parsed[name]) ? parsed[name] : [];
+      for(const item of items){
+        const clone = Object.assign({}, item);
+        delete clone.id;
+        await db.collection(name).add(clone);
+      }
+    }
+  }
+
+  try{
+    firebase.initializeApp(firebaseConfig);
+    const realDb = firebase.firestore();
+    try{ realDb.enablePersistence({ synchronizeTabs: true }); }
+    catch(e){ /* persistência offline indisponível neste navegador/aba — segue só online */ }
+    db = makeDb(realDb);
+    COLLECTIONS.forEach(name => {
+      realDb.collection(name).onSnapshot(snap => {
+        store[name] = snap.docs.map(d => Object.assign({ id: d.id }, d.data()));
+        readyFlags[name] = true;
+        if(!dbReady && COLLECTIONS.every(c => readyFlags[c])) dbReady = true;
+        syncAndRender();
+      }, err => {
+        console.error('Erro ao sincronizar '+name, err);
+        connError = true;
+        renderAll();
+      });
+    });
+  }catch(e){
+    console.error('Falha ao iniciar o banco de dados', e);
+    connError = true;
+  }
+
   syncAndRender();
 
   /* ---------------- backup (baixar / restaurar) ---------------- */
@@ -520,15 +577,10 @@
       catch(e){ confirmModal('Este arquivo não parece um backup válido.', ()=>{}); return; }
       const okShape = parsed && Array.isArray(parsed.services) && Array.isArray(parsed.products) && Array.isArray(parsed.appointments) && Array.isArray(parsed.financeiro);
       if(!okShape){ confirmModal('Este arquivo não parece um backup válido.', ()=>{}); return; }
+      if(!dbReady){ confirmModal('Ainda carregando a conexão com os dados. Tente novamente em instantes.', ()=>{}); return; }
       const dateLabel = parsed.exportedAt ? new Date(parsed.exportedAt).toLocaleString('pt-BR') : 'data desconhecida';
-      confirmModal(`Restaurar o backup de ${dateLabel}? Isso substitui todos os dados atuais deste navegador.`, () => {
-        store = {
-          services: parsed.services, products: parsed.products,
-          appointments: parsed.appointments, financeiro: parsed.financeiro,
-          doseLots: Array.isArray(parsed.doseLots) ? parsed.doseLots : [],
-          meta: store.meta || {},
-        };
-        saveStore(); syncAndRender();
+      confirmModal(`Restaurar o backup de ${dateLabel}? Isso substitui todos os dados salvos na nuvem.`, () => {
+        restoreFromBackup(parsed);
       });
     };
     reader.readAsText(file);
@@ -596,11 +648,14 @@
   function renderAll(){
     renderNav();
     const main = document.getElementById('main');
-    if(ui.tab === 'agenda') main.innerHTML = agendaView();
-    else if(ui.tab === 'catalog') main.innerHTML = catalogView();
-    else if(ui.tab === 'doses') main.innerHTML = dosesView();
-    else if(ui.tab === 'financeiro') main.innerHTML = financeView();
-    else main.innerHTML = backupView();
+    let statusBanner = '';
+    if(connError) statusBanner = `<div class="banner" style="background:var(--danger-tint);color:var(--danger);"><span>⚠ Não foi possível conectar ao banco de dados agora. Verifique sua internet — suas alterações não serão salvas até a conexão voltar.</span></div>`;
+    else if(!dbReady) statusBanner = `<div class="banner"><span>⏳ Carregando seus dados...</span></div>`;
+    if(ui.tab === 'agenda') main.innerHTML = statusBanner + agendaView();
+    else if(ui.tab === 'catalog') main.innerHTML = statusBanner + catalogView();
+    else if(ui.tab === 'doses') main.innerHTML = statusBanner + dosesView();
+    else if(ui.tab === 'financeiro') main.innerHTML = statusBanner + financeView();
+    else main.innerHTML = statusBanner + backupView();
     wireMain();
   }
 
@@ -1640,3 +1695,5 @@
 
 })();
 </script>
+</body>
+</html>
