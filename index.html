@@ -362,6 +362,7 @@
     chevR:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>',
     download:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0-4-4m4 4 4-4"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>',
     doses:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3c4 5 6.5 8.7 6.5 12a6.5 6.5 0 0 1-13 0C5.5 11.7 8 8 12 3Z"/></svg>',
+    manual:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2Z"/></svg>',
   };
 
   const NAV = [
@@ -370,6 +371,7 @@
     { id:'doses', label:'Doses por cliente', icon:ICONS.doses },
     { id:'financeiro', label:'Financeiro', icon:ICONS.financeiro },
     { id:'backup', label:'Backup', icon:ICONS.download },
+    { id:'manual', label:'Manual', icon:ICONS.manual },
   ];
 
   /* ---------------- state ---------------- */
@@ -660,6 +662,7 @@
     else if(ui.tab === 'catalog') main.innerHTML = statusBanner + catalogView();
     else if(ui.tab === 'doses') main.innerHTML = statusBanner + dosesView();
     else if(ui.tab === 'financeiro') main.innerHTML = statusBanner + financeView();
+    else if(ui.tab === 'manual') main.innerHTML = manualView();
     else main.innerHTML = statusBanner + backupView();
     wireMain();
   }
@@ -1059,6 +1062,68 @@
         <p style="font-size:13px;color:var(--ink-dim);margin:0 0 14px;">Remove de uma vez os serviços, produtos, agendamentos e lançamentos marcados como exemplo.</p>
         <button class="btn btn-danger-ghost" id="clearExampleBtn">Remover dados de exemplo</button>
       </div>
+    `;
+  }
+
+  /* ================= MANUAL ================= */
+  function manualView(){
+    const sec = (title, body) => `
+      <div class="card" style="padding:20px 22px;margin-bottom:16px;">
+        <h3 style="margin:0 0 10px;">${title}</h3>
+        ${body}
+      </div>`;
+    const p = (html) => `<p style="font-size:13.5px;color:var(--ink-dim);line-height:1.55;margin:0 0 10px;">${html}</p>`;
+
+    return `
+      <div class="main-header">
+        <div>
+          <h1>Manual</h1>
+          <div class="desc">Guia rápido de como usar o app do studio</div>
+        </div>
+      </div>
+
+      <div class="card" style="padding:20px 22px;margin-bottom:16px;background:var(--surface-muted, var(--surface));">
+        <h3 style="margin:0 0 10px;">Bem-vinda à nova versão! 🎉</h3>
+        ${p('Este app é o mesmo de sempre, só que agora mais rápido e mais seguro. Os dados ficam salvos automaticamente na internet (não só no seu celular), então você pode abrir de qualquer aparelho — celular, computador, tablet — e vai ver sempre as mesmas informações atualizadas na hora.')}
+        ${p('Não precisa de login nem senha: é só abrir o link de sempre e usar normalmente.')}
+      </div>
+
+      ${sec('📅 Agenda', `
+        ${p('<b>Novo agendamento:</b> toque no botão "+ Novo agendamento", preencha cliente, telefone, serviço, data e horário, e salve.')}
+        ${p('<b>Editar ou cancelar:</b> enquanto o atendimento ainda não aconteceu ("Agendado"), dá pra editar (ícone de lápis) ou cancelar.')}
+        ${p('<b>Concluir um atendimento:</b> toque em "Concluir" e o app pergunta se o pagamento foi feito integralmente, parcialmente (informe quanto já recebeu) ou se a cliente ainda não pagou. Isso já lança automaticamente no Financeiro e desconta do estoque os produtos usados no serviço.')}
+        ${p('<b>Corrigir dados depois:</b> se errou o nome ou telefone de um atendimento que já foi concluído, use o ícone de lápis na linha dele pra corrigir — sem afetar o valor ou o estoque já baixado.')}
+        ${p('<b>Pagamento pendente:</b> atendimentos com pagamento em aberto mostram um aviso colorido (amarelo = dentro do prazo, vermelho = vencido) e um botão "Registrar pagamento" pra quando a cliente pagar o resto.')}
+      `)}
+
+      ${sec('🧴 Serviços e Produtos', `
+        ${p('Cadastre os serviços do studio (com preço e, se quiser, os produtos que esse serviço usa e em qual quantidade) e os produtos (com preço de venda).')}
+        ${p('<b>Controle de estoque:</b> ao cadastrar um produto, você escolhe se ele tem controle de estoque. Se tiver, informe o estoque atual e o estoque mínimo — o app avisa (com um aviso vermelho) quando ficar abaixo do mínimo, tanto na Agenda quanto direto na lista de produtos.')}
+        ${p('Serviços e produtos que você não usa mais podem ser "Inativados" em vez de excluídos — assim eles somem das opções de novo agendamento, mas o histórico antigo continua intacto.')}
+      `)}
+
+      ${sec('💉 Doses por cliente', `
+        ${p('Use essa aba para produtos que a cliente compra em quantidade total (ex: 15mg de toxina botulínica) e você vai aplicando aos poucos em várias sessões.')}
+        ${p('Primeiro marque o produto como "Vendido por dose" em Serviços e Produtos → Produtos. Depois, em "Doses por cliente", cadastre um lote pra cada compra (cliente, produto, quantidade total, data).')}
+        ${p('A cada sessão, use o botão "Aplicar dose" pra registrar quanto foi usado — o app vai descontando do total restante e guarda o histórico de cada aplicação.')}
+        ${p('Se quiser controlar o pagamento desse produto também, informe o valor combinado ao cadastrar o lote — funciona igual ao pagamento de atendimento (pago, parcial ou pendente).')}
+      `)}
+
+      ${sec('💰 Financeiro', `
+        ${p('Receitas de atendimentos concluídos entram aqui automaticamente. Pra lançar algo manual (uma despesa, ou uma receita antiga de antes do app), use "+ Novo lançamento".')}
+        ${p('<b>Editar ou excluir:</b> lançamentos manuais têm os ícones de editar e excluir na linha deles. Lançamentos automáticos (que vieram de um atendimento) só podem ser corrigidos direto na Agenda.')}
+        ${p('<b>A receber:</b> lista tudo que está pendente ou parcial (atendimentos e doses juntos), com botão pra registrar quando a cliente pagar. Se uma cliente tiver mais de uma pendência, aparece também um resumo com o total consolidado dela.')}
+        ${p('No topo da aba tem um resumo comparando receitas, despesas e saldo do mês atual com o mês anterior, com uma setinha mostrando se subiu (▲) ou desceu (▼).')}
+      `)}
+
+      ${sec('🗄️ Backup', `
+        ${p('Mesmo com os dados salvos na internet, é sempre bom ter uma cópia de segurança de vez em quando. Vá em Backup → "Baixar backup agora" e guarde o arquivo em algum lugar seguro (e-mail, WhatsApp, Google Drive/iCloud).')}
+        ${p('Se precisar, é possível restaurar um backup antigo em Backup → "Escolher arquivo de backup" — isso substitui os dados atuais pelos do arquivo.')}
+      `)}
+
+      ${sec('❓ Dúvidas', `
+        ${p('Qualquer dúvida ou sugestão, chama o Rhuan. 💙')}
+      `)}
     `;
   }
 
