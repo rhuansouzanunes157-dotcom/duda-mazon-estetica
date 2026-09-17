@@ -363,11 +363,13 @@
     download:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0-4-4m4 4 4-4"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>',
     doses:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3c4 5 6.5 8.7 6.5 12a6.5 6.5 0 0 1-13 0C5.5 11.7 8 8 12 3Z"/></svg>',
     manual:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2Z"/></svg>',
+    pacotes:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8 12 3 3 8l9 5 9-5Z"/><path d="M3 8v8l9 5 9-5V8"/><path d="M12 13v8"/></svg>',
   };
 
   const NAV = [
     { id:'agenda', label:'Agenda', icon:ICONS.agenda },
     { id:'catalog', label:'Serviços e Produtos', icon:ICONS.catalog },
+    { id:'pacotes', label:'Pacotes', icon:ICONS.pacotes },
     { id:'doses', label:'Doses por cliente', icon:ICONS.doses },
     { id:'financeiro', label:'Financeiro', icon:ICONS.financeiro },
     { id:'backup', label:'Backup', icon:ICONS.download },
@@ -376,7 +378,7 @@
 
   /* ---------------- state ---------------- */
   const STORAGE_KEY = 'duda-mazon-studio-data-v1';
-  const state = { services:[], products:[], appointments:[], financeiro:[], doseLots:[] };
+  const state = { services:[], products:[], appointments:[], financeiro:[], doseLots:[], packages:[] };
   const ui = { tab:'agenda', sub:'servicos', date: todayISO(), month: monthISO() };
 
   /* ---------------- local storage (sem login, dados no navegador) ---------------- */
@@ -427,8 +429,9 @@
     catch(e){ console.warn('Não foi possível salvar o cache local', e); }
   }
 
-  let store = loadStore() || { services:[], products:[], appointments:[], financeiro:[], doseLots:[], meta:{} };
+  let store = loadStore() || { services:[], products:[], appointments:[], financeiro:[], doseLots:[], packages:[], meta:{} };
   if(!Array.isArray(store.doseLots)) store.doseLots = [];
+  if(!Array.isArray(store.packages)) store.packages = [];
 
   function syncAndRender(){
     state.services = store.services;
@@ -436,6 +439,7 @@
     state.appointments = store.appointments;
     state.financeiro = store.financeiro;
     state.doseLots = store.doseLots;
+    state.packages = store.packages;
     saveStore();
     renderAll();
   }
@@ -450,7 +454,7 @@
     appId: "1:991037385923:web:090d6ff884930aed500676"
   };
 
-  const COLLECTIONS = ['services','products','appointments','financeiro','doseLots'];
+  const COLLECTIONS = ['services','products','appointments','financeiro','doseLots','packages'];
 
   function sanitizeForFirestore(obj){
     if(Array.isArray(obj)) return obj.map(sanitizeForFirestore);
@@ -552,6 +556,7 @@
       appointments: store.appointments,
       financeiro: store.financeiro,
       doseLots: store.doseLots,
+      packages: store.packages,
     };
     const filename = `backup-duda-mazon-${todayISO()}.json`;
     try{
@@ -632,7 +637,18 @@
   function doseLotReceivables(){
     return state.doseLots.filter(l => l.totalAmount != null && (l.paymentStatus === 'pendente' || l.paymentStatus === 'parcial'));
   }
-  // pendências financeiras unificadas: atendimentos concluídos + lotes por dose, com pagamento pendente ou parcial
+  function activePackages(){ return state.packages.filter(pk => (pk.sessionsUsed||0) < (pk.sessionsTotal||0)); }
+  function finishedPackages(){ return state.packages.filter(pk => (pk.sessionsUsed||0) >= (pk.sessionsTotal||0)); }
+  function packageReceivables(){
+    return state.packages.filter(pk => pk.totalAmount != null && (pk.paymentStatus === 'pendente' || pk.paymentStatus === 'parcial'));
+  }
+  function packageById(id){ return state.packages.find(pk => pk.id === id); }
+  // sessões do pacote que ainda não têm data marcada na Agenda
+  function packageUnscheduledCount(pk){
+    const scheduled = state.appointments.filter(a => a.packageId === pk.id && a.status !== 'cancelado').length;
+    return Math.max(0, (pk.sessionsTotal||0) - scheduled);
+  }
+  // pendências financeiras unificadas: atendimentos concluídos + lotes por dose + pacotes de serviço, com pagamento pendente ou parcial
   function allReceivables(){
     const appts = receivables().map(a => ({
       kind:'appt', id:a.id, clientName:a.clientName, label:a.serviceName,
@@ -644,7 +660,12 @@
       total: Number(l.totalAmount), paid: Number(l.amountPaid||0), dueDate: l.dueDate||'',
       refDate: l.purchaseDate, paymentStatus: l.paymentStatus,
     }));
-    return appts.concat(doses);
+    const packages = packageReceivables().map(pk => ({
+      kind:'package', id:pk.id, clientName:pk.clientName, label:`${pk.serviceName} (pacote)`,
+      total: Number(pk.totalAmount), paid: Number(pk.amountPaid||0), dueDate: pk.dueDate||'',
+      refDate: pk.purchaseDate, paymentStatus: pk.paymentStatus,
+    }));
+    return appts.concat(doses, packages);
   }
   function overdueReceivablesAll(){
     const t = todayISO();
@@ -660,6 +681,7 @@
     else if(!dbReady) statusBanner = `<div class="banner"><span>⏳ Carregando seus dados...</span></div>`;
     if(ui.tab === 'agenda') main.innerHTML = statusBanner + agendaView();
     else if(ui.tab === 'catalog') main.innerHTML = statusBanner + catalogView();
+    else if(ui.tab === 'pacotes') main.innerHTML = statusBanner + packagesView();
     else if(ui.tab === 'doses') main.innerHTML = statusBanner + dosesView();
     else if(ui.tab === 'financeiro') main.innerHTML = statusBanner + financeView();
     else if(ui.tab === 'manual') main.innerHTML = manualView();
@@ -674,10 +696,12 @@
     const pendingCount = allReceivables().length;
     const overdueCount = overdueReceivablesAll().length;
     const doseActiveCount = activeDoseLots().length;
+    const pkgActiveCount = activePackages().length;
     nav.innerHTML = NAV.map(n => {
       let badge = '';
       if(n.id==='agenda' && todayCount>0) badge = `<span class="badge">${todayCount}</span>`;
       if(n.id==='catalog' && lowCount>0) badge = `<span class="badge badge-alert">${lowCount}</span>`;
+      if(n.id==='pacotes' && pkgActiveCount>0) badge = `<span class="badge">${pkgActiveCount}</span>`;
       if(n.id==='doses' && doseActiveCount>0) badge = `<span class="badge">${doseActiveCount}</span>`;
       if(n.id==='financeiro' && pendingCount>0) badge = overdueCount>0 ? `<span class="badge badge-alert">${overdueCount}</span>` : `<span class="badge badge-soft">${pendingCount}</span>`;
       if(n.id==='backup' && needsBackup()) badge = `<span class="badge badge-soft">!</span>`;
@@ -708,8 +732,9 @@
 
     const rows = dayAppts.map(a => {
       const statusLabel = a.status==='agendado'?'Agendado':a.status==='concluido'?'Concluído':'Cancelado';
-      const price = a.status==='concluido' ? (a.totalAmount ?? a.servicePrice) : a.servicePrice;
+      const priceLabel = a.packageId ? 'Coberto' : fmtMoney(a.status==='concluido' ? (a.totalAmount ?? a.servicePrice) : a.servicePrice);
       const extras = (a.extraProducts||[]).length ? `<span class="chip">+ ${a.extraProducts.map(p=>`${p.qty}× ${esc(p.name)}`).join(', ')}</span>` : '';
+      const packageChip = a.packageId ? ` <span class="chip">📦 Pacote</span>` : '';
       let payBadge = '';
       if(a.status==='concluido' && (a.paymentStatus==='pendente' || a.paymentStatus==='parcial')){
         const overdue = (a.dueDate || a.date) < todayISO();
@@ -732,10 +757,10 @@
         <div class="appt-time tabular">${esc(a.time||'--:--')}</div>
         <div class="appt-main">
           <div class="appt-client">${esc(a.clientName)}${a.clientPhone?` <span class="chip">${esc(a.clientPhone)}</span>`:''}</div>
-          <div class="appt-service">${esc(a.serviceName)} ${extras}</div>
+          <div class="appt-service">${esc(a.serviceName)} ${extras}${packageChip}</div>
         </div>
         <span class="badge badge-${a.status}">${statusLabel}</span>${payBadge}
-        <div class="appt-price tabular">${fmtMoney(price)}</div>
+        <div class="appt-price tabular">${priceLabel}</div>
         <div class="appt-actions">${actions}</div>
       </div>`;
     }).join('');
@@ -906,6 +931,65 @@
     `;
   }
 
+  /* ================= PACOTES DE SERVIÇO ================= */
+  function packagesView(){
+    const active = activePackages();
+    const finished = finishedPackages();
+
+    const rowHTML = (pk) => {
+      const total = Number(pk.sessionsTotal) || 0;
+      const used = Number(pk.sessionsUsed) || 0;
+      const pct = total > 0 ? Math.max(0, Math.min(100, Math.round((used/total)*100))) : 0;
+      const isFinished = used >= total;
+      const unscheduled = packageUnscheduledCount(pk);
+      const tracked = pk.totalAmount != null;
+      const amtTotal = Number(pk.totalAmount) || 0;
+      const amtPaid = Number(pk.amountPaid) || 0;
+      const saldo = Math.max(0, amtTotal - amtPaid);
+      const overdue = tracked && saldo > 0 && (pk.dueDate || pk.purchaseDate) < todayISO();
+      const payBadge = !tracked ? '' : saldo <= 0 ? '' : overdue ? ` <span class="badge badge-alert">Vencido</span>` : ` <span class="badge badge-low">${pk.paymentStatus==='parcial'?'Parcial':'Pendente'}</span>`;
+      const payLine = tracked ? `<div class="tx-date" style="margin-top:4px;">Pago ${fmtMoney(amtPaid)} de ${fmtMoney(amtTotal)}${payBadge}</div>` : '';
+      return `<div class="item-card ${isFinished?'inactive':''}">
+        <div style="flex:1;min-width:200px;">
+          <div class="appt-client">${esc(pk.clientName)}${pk.clientPhone?` <span class="chip">${esc(pk.clientPhone)}</span>`:''}</div>
+          <div class="appt-service">${esc(pk.serviceName)}${pk.purchaseDate?` · comprado em ${fmtDate(pk.purchaseDate)}`:''}${unscheduled>0?` <span class="chip">${unscheduled} sessão(ões) sem data</span>`:''}</div>
+          <div class="dose-bar"><div class="dose-bar-fill" style="width:${pct}%;"></div></div>
+          ${payLine}
+        </div>
+        <div class="appt-price tabular" style="width:auto;text-align:right;">${used} / ${total} sessões</div>
+        <div class="appt-actions">
+          ${tracked && saldo > 0 ? `<button class="btn btn-primary btn-sm" data-register-package-payment="${pk.id}">Registrar pagamento</button>` : ''}
+          ${unscheduled > 0 ? `<button class="btn btn-primary btn-sm" data-schedule-session="${pk.id}">Agendar sessão</button>` : ''}
+          ${isFinished ? `<span class="badge badge-cancelado">Finalizado</span>` : ''}
+          <button class="icon-btn" title="Editar" data-edit-package="${pk.id}">${ICONS.edit}</button>
+          <button class="icon-btn" title="Excluir" data-delete-package="${pk.id}">${ICONS.trash}</button>
+        </div>
+      </div>`;
+    };
+
+    const activeBlock = active.length
+      ? `<div class="row-list">${active.map(rowHTML).join('')}</div>`
+      : `<div class="empty"><div class="display">Nenhum pacote em andamento</div><div>Cadastre um pacote quando uma cliente comprar várias sessões do mesmo serviço de uma vez (ex: pacote de 4 massagens).</div><div style="margin-top:14px;"><button class="btn btn-primary" id="emptyNewPackage">${ICONS.plus} Novo pacote</button></div></div>`;
+
+    const finishedBlock = finished.length ? `
+      <div style="margin-top:28px;">
+        <h3 style="font-size:13px;color:var(--ink-dim);margin:0 0 10px;font-family:'Work Sans',sans-serif;font-weight:600;text-transform:uppercase;letter-spacing:0.03em;">Finalizados</h3>
+        <div class="row-list">${finished.map(rowHTML).join('')}</div>
+      </div>` : '';
+
+    return `
+      <div class="main-header">
+        <div>
+          <h1>Pacotes</h1>
+          <div class="desc">Pacotes de várias sessões do mesmo serviço, vendidos de uma vez</div>
+        </div>
+        <button class="btn btn-primary" id="newPackageBtn">${ICONS.plus} Novo pacote</button>
+      </div>
+      ${activeBlock}
+      ${finishedBlock}
+    `;
+  }
+
   /* ================= FINANCEIRO ================= */
   function financeView(){
     const monthTx = state.financeiro.filter(t => (t.date||'').slice(0,7) === ui.month)
@@ -1004,9 +1088,9 @@
       const saldo = Math.max(0, x.total - x.paid);
       const due = x.dueDate || '';
       const overdue = due ? due < t : (x.refDate < t);
-      const dueLabel = due ? `venc. ${fmtDate(due)}` : `${x.kind==='dose'?'comprado':'atendido'} em ${fmtDate(x.refDate)}`;
+      const dueLabel = due ? `venc. ${fmtDate(due)}` : `${x.kind==='dose'||x.kind==='package'?'comprado':'atendido'} em ${fmtDate(x.refDate)}`;
       const statusBadge = overdue ? `<span class="badge badge-alert">Vencido</span>` : `<span class="badge badge-low">${x.paymentStatus==='parcial'?'Parcial':'Pendente'}</span>`;
-      const attr = x.kind==='dose' ? `data-register-dose-payment="${x.id}"` : `data-register-payment="${x.id}"`;
+      const attr = x.kind==='dose' ? `data-register-dose-payment="${x.id}"` : x.kind==='package' ? `data-register-package-payment="${x.id}"` : `data-register-payment="${x.id}"`;
       return `<div class="tx-row divider-row">
         <div class="tx-desc">
           <div>${esc(x.clientName)} <span style="color:var(--ink-faint);">· ${esc(x.label)}</span></div>
@@ -1096,6 +1180,13 @@
         ${p('<b>Pagamento pendente:</b> atendimentos com pagamento em aberto mostram um aviso colorido (amarelo = dentro do prazo, vermelho = vencido) e um botão "Registrar pagamento" pra quando a cliente pagar o resto.')}
       `)}
 
+      ${sec('📦 Pacotes', `
+        ${p('Use essa aba quando a cliente comprar várias sessões do mesmo serviço de uma vez, como um pacote de 4 massagens.')}
+        ${p('Ao criar o pacote, escolha o serviço e quantas sessões — você já pode marcar as datas de todas de uma vez (tem um botão "Preencher automaticamente" que marca 1 por semana), ou deixar em branco e agendar aos poucos depois, pelo botão "Agendar sessão".')}
+        ${p('As sessões agendadas aparecem normalmente na Agenda, com um selo "📦 Pacote". Ao concluir uma dessas sessões, o app não cobra de novo — já está coberta pelo pacote.')}
+        ${p('Se quiser controlar o pagamento do pacote também, informe o valor combinado ao cadastrar — funciona igual ao pagamento de atendimento (pago, parcial ou pendente).')}
+      `)}
+
       ${sec('🧴 Serviços e Produtos', `
         ${p('Cadastre os serviços do studio (com preço e, se quiser, os produtos que esse serviço usa e em qual quantidade) e os produtos (com preço de venda).')}
         ${p('<b>Controle de estoque:</b> ao cadastrar um produto, você escolhe se ele tem controle de estoque. Se tiver, informe o estoque atual e o estoque mínimo — o app avisa (com um aviso vermelho) quando ficar abaixo do mínimo, tanto na Agenda quanto direto na lista de produtos.')}
@@ -1164,12 +1255,20 @@
       document.querySelectorAll('[data-delete-product]').forEach(b => b.onclick = () => confirmModal('Excluir este produto?', () => db.collection('products').doc(b.dataset.deleteProduct).delete()));
       document.querySelectorAll('[data-toggle-product]').forEach(b => b.onclick = () => { const p=state.products.find(x=>x.id===b.dataset.toggleProduct); db.collection('products').doc(p.id).update({active: p.active===false}); });
     }
+    else if(ui.tab === 'pacotes'){
+      document.getElementById('newPackageBtn').onclick = () => openPackageModal();
+      const ep = document.getElementById('emptyNewPackage'); if(ep) ep.onclick = () => openPackageModal();
+      document.querySelectorAll('[data-schedule-session]').forEach(b => b.onclick = () => openScheduleSessionModal(packageById(b.dataset.scheduleSession)));
+      document.querySelectorAll('[data-edit-package]').forEach(b => b.onclick = () => openPackageModal(packageById(b.dataset.editPackage)));
+      document.querySelectorAll('[data-delete-package]').forEach(b => b.onclick = () => confirmModal('Excluir este pacote? Os agendamentos (agendados ou já realizados) ligados a ele também serão excluídos.', () => deletePackageCascade(b.dataset.deletePackage)));
+      document.querySelectorAll('[data-register-package-payment]').forEach(b => b.onclick = () => openRegisterPackagePaymentModal(packageById(b.dataset.registerPackagePayment)));
+    }
     else if(ui.tab === 'doses'){
       document.getElementById('newDoseBtn').onclick = () => openDoseLotModal();
       const ed = document.getElementById('emptyNewDose'); if(ed) ed.onclick = () => openDoseLotModal();
       document.querySelectorAll('[data-apply-dose]').forEach(b => b.onclick = () => openApplyDoseModal(state.doseLots.find(l=>l.id===b.dataset.applyDose)));
       document.querySelectorAll('[data-edit-dose]').forEach(b => b.onclick = () => openDoseLotModal(state.doseLots.find(l=>l.id===b.dataset.editDose)));
-      document.querySelectorAll('[data-delete-dose]').forEach(b => b.onclick = () => confirmModal('Excluir este lote? O histórico de aplicações será perdido.', () => db.collection('doseLots').doc(b.dataset.deleteDose).delete()));
+      document.querySelectorAll('[data-delete-dose]').forEach(b => b.onclick = () => confirmModal('Excluir este lote? O histórico de aplicações será perdido.', () => deleteDoseLotCascade(b.dataset.deleteDose)));
       document.querySelectorAll('[data-register-dose-payment]').forEach(b => b.onclick = () => openRegisterDosePaymentModal(state.doseLots.find(l=>l.id===b.dataset.registerDosePayment)));
     }
     else if(ui.tab === 'financeiro'){
@@ -1180,6 +1279,7 @@
       document.querySelectorAll('[data-delete-tx]').forEach(b => b.onclick = () => confirmModal('Excluir este lançamento?', () => db.collection('financeiro').doc(b.dataset.deleteTx).delete()));
       document.querySelectorAll('[data-register-payment]').forEach(b => b.onclick = () => openRegisterPaymentModal(state.appointments.find(a=>a.id===b.dataset.registerPayment)));
       document.querySelectorAll('[data-register-dose-payment]').forEach(b => b.onclick = () => openRegisterDosePaymentModal(state.doseLots.find(l=>l.id===b.dataset.registerDosePayment)));
+      document.querySelectorAll('[data-register-package-payment]').forEach(b => b.onclick = () => openRegisterPackagePaymentModal(packageById(b.dataset.registerPackagePayment)));
     }
     else if(ui.tab === 'backup'){
       const exportBtn = document.getElementById('exportBackupBtn');
@@ -1484,13 +1584,14 @@
         clientName, clientPhone, productId, productName: prod ? prod.name : '', unit,
         totalQty, remainingQty: totalQty, purchaseDate: date, notes, history: [],
         totalAmount, amountPaid, paymentStatus, dueDate, payments, createdAt: Date.now(),
+      }).then(ref => {
+        if(amountPaid > 0){
+          db.collection('financeiro').add({
+            type:'receita', description:`Produto por dose — ${prod ? prod.name : ''} (${clientName})`,
+            amount: amountPaid, date, clientName, source:'auto', doseLotId: ref.id, createdAt: Date.now(),
+          });
+        }
       });
-      if(amountPaid > 0){
-        db.collection('financeiro').add({
-          type:'receita', description:`Produto por dose — ${prod ? prod.name : ''} (${clientName})`,
-          amount: amountPaid, date, clientName, source:'auto', createdAt: Date.now(),
-        });
-      }
       closeModal();
     };
   }
@@ -1560,11 +1661,264 @@
       db.collection('financeiro').add({
         type:'receita',
         description:`Pagamento — ${lot.productName} (${lot.clientName})`,
-        amount, date, clientName: lot.clientName, source:'auto', createdAt: Date.now(),
+        amount, date, clientName: lot.clientName, source:'auto', doseLotId: lot.id, createdAt: Date.now(),
       });
       db.collection('doseLots').doc(lot.id).update({ amountPaid: newPaid, paymentStatus: newStatus, payments, dueDate: newStatus==='pago' ? '' : lot.dueDate });
       closeModal();
     };
+  }
+
+  /* ---- Pacote de serviço: novo/editar ---- */
+  function openPackageModal(existing){
+    if(notReadyGuard()) return;
+    const isEdit = !!existing;
+    const svcList = activeServices();
+    if(!isEdit && svcList.length === 0){
+      infoModal('Nenhum serviço cadastrado', 'Antes de criar um pacote, cadastre pelo menos um serviço em "Serviços e Produtos".');
+      return;
+    }
+    const clientsMap = uniqueClientsMap();
+    const clientOptions = Object.keys(clientsMap).map(n => `<option value="${esc(n)}"></option>`).join('');
+
+    let serviceField, sessionsField;
+    if(isEdit){
+      serviceField = `<div class="field"><label>Serviço</label><input type="text" value="${esc(existing.serviceName)}" disabled></div>`;
+      sessionsField = `<div class="field"><label>Quantidade de sessões</label><input type="text" value="${existing.sessionsTotal}" disabled></div>`;
+    } else {
+      const svcOptions = svcList.map(s => `<option value="${s.id}">${esc(s.name)} — ${fmtMoney(s.price)}</option>`).join('');
+      serviceField = `<div class="field"><label for="pkService">Serviço</label><select id="pkService">${svcOptions}</select></div>`;
+      sessionsField = `<div class="field"><label for="pkSessions">Quantidade de sessões</label><input type="number" id="pkSessions" min="1" step="1" value="4"></div>`;
+    }
+
+    openModal(`
+      <h2>${isEdit?'Editar pacote':'Novo pacote de serviço'}</h2>
+      <div class="field"><label for="pkClient">Cliente</label><input type="text" id="pkClient" list="pkClientList" value="${esc(existing?.clientName||'')}" placeholder="Nome da cliente" autocomplete="off"><datalist id="pkClientList">${clientOptions}</datalist></div>
+      <div class="field"><label for="pkPhone">Telefone (opcional)</label><input type="tel" id="pkPhone" value="${esc(existing?.clientPhone||'')}" placeholder="(00) 00000-0000"></div>
+      ${serviceField}
+      ${sessionsField}
+      <div class="field"><label for="pkDate">Data da compra</label><input type="date" id="pkDate" value="${existing?.purchaseDate||todayISO()}"></div>
+      ${isEdit ? `
+      <div style="font-size:12px;color:var(--ink-faint);margin-top:-10px;margin-bottom:14px;">Pra corrigir o serviço ou a quantidade de sessões, exclua este pacote e crie um novo.</div>
+      ` : `
+      <div class="field"><label for="pkValue">Valor total combinado (opcional)</label><input type="number" id="pkValue" min="0" step="0.01" placeholder="0,00"></div>
+      <div style="font-size:12px;color:var(--ink-faint);margin-top:-10px;margin-bottom:14px;">Preencha se quiser controlar o pagamento desse pacote. Deixando em branco, ele não entra no controle financeiro.</div>
+      <div class="field" id="pkPayField" hidden>
+        <label for="pkPayStatus">Pagamento</label>
+        <select id="pkPayStatus">
+          <option value="pago">Pago integralmente</option>
+          <option value="parcial">Pago parcialmente</option>
+          <option value="pendente">Ainda não pagou</option>
+        </select>
+      </div>
+      <div class="field" id="pkPayAmountField" hidden>
+        <label for="pkPayAmount">Valor pago agora</label>
+        <input type="number" id="pkPayAmount" min="0" step="0.01" placeholder="0,00">
+      </div>
+      <div class="field" id="pkDueField" hidden>
+        <label for="pkDue">Vencimento do restante (opcional)</label>
+        <input type="date" id="pkDue" value="${shiftDate(todayISO(),7)}">
+      </div>
+      <div class="field">
+        <label>Datas das sessões (opcional — pode deixar em branco e agendar depois)</label>
+        <div id="pkSessionDates"></div>
+        <button type="button" class="link-btn" id="pkFillWeekly">Preencher automaticamente (1 por semana)</button>
+      </div>
+      `}
+      <div class="field"><label for="pkNote">Observações (opcional)</label><textarea id="pkNote" placeholder="Ex: sessões às quartas-feiras">${esc(existing?.notes||'')}</textarea></div>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" id="pkCancel">Cancelar</button>
+        <button class="btn btn-primary" id="pkSave">Salvar</button>
+      </div>
+    `);
+    document.getElementById('pkCancel').onclick = closeModal;
+
+    if(!isEdit){
+      const sessionsInput = document.getElementById('pkSessions');
+      const datesContainer = document.getElementById('pkSessionDates');
+      const renderDateRows = () => {
+        const n = Math.max(1, Math.min(52, parseInt(sessionsInput.value, 10) || 1));
+        const prev = Array.from(datesContainer.querySelectorAll('[data-session-date]')).map(inp => inp.value);
+        const prevTimes = Array.from(datesContainer.querySelectorAll('[data-session-time]')).map(inp => inp.value);
+        let html = '';
+        for(let i=0;i<n;i++){
+          html += `<div class="field-row" style="margin-bottom:8px;">
+            <div class="field" style="margin-bottom:0;"><label style="font-size:12px;">Sessão ${i+1}</label><input type="date" data-session-date value="${prev[i]||''}"></div>
+            <div class="field" style="margin-bottom:0;"><label style="font-size:12px;">&nbsp;</label><input type="time" data-session-time value="${prevTimes[i]||''}"></div>
+          </div>`;
+        }
+        datesContainer.innerHTML = html;
+      };
+      sessionsInput.oninput = renderDateRows;
+      renderDateRows();
+      document.getElementById('pkFillWeekly').onclick = () => {
+        const dateInputs = datesContainer.querySelectorAll('[data-session-date]');
+        const timeInputs = datesContainer.querySelectorAll('[data-session-time]');
+        const firstDate = dateInputs[0].value || todayISO();
+        const firstTime = timeInputs[0].value || '09:00';
+        dateInputs.forEach((inp, i) => { inp.value = shiftDate(firstDate, i*7); });
+        timeInputs.forEach(inp => { if(!inp.value) inp.value = firstTime; });
+      };
+
+      const valueInput = document.getElementById('pkValue');
+      const payField = document.getElementById('pkPayField');
+      const payStatusSel = document.getElementById('pkPayStatus');
+      const payAmountField = document.getElementById('pkPayAmountField');
+      const dueField = document.getElementById('pkDueField');
+      const syncPayFields = () => {
+        const hasValue = toQty(valueInput.value) > 0;
+        payField.hidden = !hasValue;
+        if(!hasValue){ payAmountField.hidden = true; dueField.hidden = true; return; }
+        const v = payStatusSel.value;
+        payAmountField.hidden = v !== 'parcial';
+        dueField.hidden = v === 'pago';
+      };
+      valueInput.oninput = syncPayFields;
+      payStatusSel.onchange = syncPayFields;
+      syncPayFields();
+    }
+
+    document.getElementById('pkSave').onclick = () => {
+      const clientName = document.getElementById('pkClient').value.trim();
+      const clientPhone = document.getElementById('pkPhone').value.trim();
+      const notes = document.getElementById('pkNote').value.trim();
+      const date = document.getElementById('pkDate').value || todayISO();
+      if(!clientName) return;
+      if(isEdit){
+        db.collection('packages').doc(existing.id).update({ clientName, clientPhone, notes, purchaseDate: date });
+        closeModal();
+        return;
+      }
+      const serviceId = document.getElementById('pkService').value;
+      const svc = serviceById(serviceId);
+      const sessionsTotal = Math.max(1, Math.min(52, parseInt(document.getElementById('pkSessions').value, 10) || 0));
+      if(!serviceId || !svc){ infoModal('Serviço inválido', 'Selecione um serviço válido.'); return; }
+
+      const value = toQty(document.getElementById('pkValue').value);
+      let totalAmount = null, amountPaid = 0, paymentStatus = null, dueDate = '';
+      if(value > 0){
+        totalAmount = value;
+        const payStatus = document.getElementById('pkPayStatus').value;
+        amountPaid = payStatus === 'pago' ? totalAmount : payStatus === 'pendente' ? 0 : toQty(document.getElementById('pkPayAmount').value || 0);
+        if(payStatus === 'parcial' && !(amountPaid > 0)){
+          infoModal('Valor pago inválido', 'Você marcou "Pago parcialmente" — preencha quanto já foi pago (maior que zero).');
+          return;
+        }
+        if(amountPaid > totalAmount) amountPaid = totalAmount;
+        if(amountPaid < 0) amountPaid = 0;
+        paymentStatus = amountPaid <= 0 ? 'pendente' : amountPaid >= totalAmount ? 'pago' : 'parcial';
+        dueDate = payStatus === 'pago' ? '' : (document.getElementById('pkDue').value || '');
+      }
+
+      const sessionDates = Array.from(document.querySelectorAll('#pkSessionDates [data-session-date]')).map((inp, i) => ({
+        date: inp.value, time: (document.querySelectorAll('#pkSessionDates [data-session-time]')[i]||{}).value || '',
+      })).filter(sd => sd.date && sd.time);
+
+      const payments = amountPaid > 0 ? [{ amount: amountPaid, date, note:'Pagamento na compra', createdAt: Date.now() }] : [];
+      db.collection('packages').add({
+        clientName, clientPhone, serviceId, serviceName: svc.name, servicePrice: svc.price,
+        sessionsTotal, sessionsUsed: 0, purchaseDate: date, notes,
+        totalAmount, amountPaid, paymentStatus, dueDate, payments, createdAt: Date.now(),
+      }).then(ref => {
+        sessionDates.forEach(sd => {
+          db.collection('appointments').add({
+            clientName, clientPhone, serviceId, serviceName: svc.name, servicePrice: svc.price,
+            serviceProductsUsed: svc.productsUsed || [], date: sd.date, time: sd.time, extraProducts: [], notes: '',
+            status:'agendado', packageId: ref.id, createdAt: Date.now(),
+          });
+        });
+        if(amountPaid > 0){
+          db.collection('financeiro').add({
+            type:'receita', description:`Pacote — ${svc.name} (${clientName})`,
+            amount: amountPaid, date, clientName, source:'auto', packageId: ref.id, createdAt: Date.now(),
+          });
+        }
+      });
+      closeModal();
+    };
+  }
+
+  function openScheduleSessionModal(pk){
+    if(notReadyGuard() || !pk) return;
+    const svc = serviceById(pk.serviceId);
+    openModal(`
+      <h2>Agendar sessão do pacote</h2>
+      <p style="color:var(--ink-dim);margin:0 0 16px;">${esc(pk.clientName)} — ${esc(pk.serviceName)}</p>
+      <div class="field-row">
+        <div class="field"><label for="ssDate">Data</label><input type="date" id="ssDate" value="${todayISO()}"></div>
+        <div class="field"><label for="ssTime">Horário</label><input type="time" id="ssTime"></div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" id="ssCancel">Cancelar</button>
+        <button class="btn btn-primary" id="ssSave">Agendar</button>
+      </div>
+    `);
+    document.getElementById('ssCancel').onclick = closeModal;
+    document.getElementById('ssSave').onclick = () => {
+      const date = document.getElementById('ssDate').value;
+      const time = document.getElementById('ssTime').value;
+      if(!date || !time) return;
+      const conflict = state.appointments.some(a => a.status === 'agendado' && a.date === date && a.time === time);
+      const save = () => {
+        db.collection('appointments').add({
+          clientName: pk.clientName, clientPhone: pk.clientPhone, serviceId: pk.serviceId,
+          serviceName: svc ? svc.name : pk.serviceName, servicePrice: svc ? svc.price : pk.servicePrice,
+          serviceProductsUsed: svc ? (svc.productsUsed||[]) : [], date, time, extraProducts:[], notes:'',
+          status:'agendado', packageId: pk.id, createdAt: Date.now(),
+        });
+        closeModal();
+      };
+      if(conflict) confirmModal(`Já existe outro agendamento às ${time} nesse dia. Salvar mesmo assim?`, save);
+      else save();
+    };
+  }
+
+  function openRegisterPackagePaymentModal(pk){
+    if(notReadyGuard() || !pk) return;
+    const total = Number(pk.totalAmount) || 0;
+    const paid = Number(pk.amountPaid) || 0;
+    const saldo = Math.max(0, total - paid);
+    openModal(`
+      <h2>Registrar pagamento</h2>
+      <p style="color:var(--ink-dim);margin:0 0 16px;">${esc(pk.clientName)} — ${esc(pk.serviceName)}<br>Total: <b class="tabular">${fmtMoney(total)}</b> · Já pago: <b class="tabular">${fmtMoney(paid)}</b> · Falta: <b class="tabular">${fmtMoney(saldo)}</b></p>
+      <div class="field"><label for="rppAmount">Valor recebido agora</label><input type="number" id="rppAmount" min="0" step="0.01" value="${saldo.toFixed(2)}"></div>
+      <div class="field"><label for="rppDate">Data do pagamento</label><input type="date" id="rppDate" value="${todayISO()}"></div>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" id="rppCancel">Cancelar</button>
+        <button class="btn btn-primary" id="rppSave">Registrar</button>
+      </div>
+    `);
+    document.getElementById('rppCancel').onclick = closeModal;
+    document.getElementById('rppSave').onclick = () => {
+      let amount = toQty(document.getElementById('rppAmount').value || 0);
+      const date = document.getElementById('rppDate').value || todayISO();
+      if(!(amount > 0)) return;
+      if(amount > saldo) amount = saldo;
+      const newPaid = paid + amount;
+      const newStatus = newPaid >= total ? 'pago' : 'parcial';
+      const payments = (pk.payments||[]).concat([{ amount, date, note:'Pagamento registrado', createdAt: Date.now() }]);
+      db.collection('financeiro').add({
+        type:'receita',
+        description:`Pagamento — Pacote ${pk.serviceName} (${pk.clientName})`,
+        amount, date, clientName: pk.clientName, source:'auto', packageId: pk.id, createdAt: Date.now(),
+      });
+      db.collection('packages').doc(pk.id).update({ amountPaid: newPaid, paymentStatus: newStatus, payments, dueDate: newStatus==='pago' ? '' : pk.dueDate });
+      closeModal();
+    };
+  }
+
+  // exclui um pacote e, junto, os agendamentos e lançamentos financeiros ligados a ele
+  async function deletePackageCascade(id){
+    try{
+      const [finSnap, apptSnap] = await Promise.all([
+        db.collection('financeiro').where('packageId','==',id).get(),
+        db.collection('appointments').where('packageId','==',id).get(),
+      ]);
+      const deletes = [];
+      finSnap.forEach(doc => deletes.push(db.collection('financeiro').doc(doc.id).delete()));
+      apptSnap.forEach(doc => deletes.push(db.collection('appointments').doc(doc.id).delete()));
+      await Promise.all(deletes);
+    }catch(e){ console.error('Falha ao limpar dados do pacote', e); }
+    db.collection('packages').doc(id).delete();
   }
 
   /* ---- Appointment modal ---- */
@@ -1722,7 +2076,30 @@
   function completeAppointment(id){
     const a = state.appointments.find(x => x.id === id);
     if(!a || a.status !== 'agendado') return;
+    if(a.packageId){
+      confirmModal(`Concluir esta sessão do pacote de ${a.clientName}? Já está coberta pelo pacote — não gera cobrança nova.`, () => completePackageSession(a));
+      return;
+    }
     openCompletePaymentModal(a);
+  }
+
+  function completePackageSession(a){
+    const deductions = {};
+    (a.serviceProductsUsed||[]).forEach(p => { deductions[p.productId] = (deductions[p.productId]||0) + Number(p.qty||0); });
+    (a.extraProducts||[]).forEach(p => { deductions[p.productId] = (deductions[p.productId]||0) + Number(p.qty||0); });
+    Object.keys(deductions).forEach(pid => {
+      const p = productById(pid);
+      if(p && p.trackStock){
+        db.collection('products').doc(pid).update({ stock: Number(p.stock||0) - deductions[pid] });
+      }
+    });
+    db.collection('appointments').doc(a.id).update({
+      status:'concluido', completedAt: Date.now(), totalAmount: computeApptTotal(a),
+    });
+    const pk = packageById(a.packageId);
+    if(pk){
+      db.collection('packages').doc(pk.id).update({ sessionsUsed: Math.min(pk.sessionsTotal||0, (pk.sessionsUsed||0) + 1) });
+    }
   }
 
   function openCompletePaymentModal(a){
@@ -1830,6 +2207,17 @@
       db.collection('appointments').doc(a.id).update({ amountPaid: newPaid, paymentStatus: newStatus, payments });
       closeModal();
     };
+  }
+
+  // exclui um lote por dose e, junto, qualquer lançamento no Financeiro ligado a ele (compra e/ou pagamentos registrados depois)
+  async function deleteDoseLotCascade(id){
+    try{
+      const snap = await db.collection('financeiro').where('doseLotId','==',id).get();
+      const deletes = [];
+      snap.forEach(doc => deletes.push(db.collection('financeiro').doc(doc.id).delete()));
+      await Promise.all(deletes);
+    }catch(e){ console.error('Falha ao limpar lançamentos financeiros do lote', e); }
+    db.collection('doseLots').doc(id).delete();
   }
 
   function cancelAppointment(id){
