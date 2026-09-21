@@ -445,6 +445,7 @@
     horarios:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l3 2"/><path d="M9 2h6"/></svg>',
     link:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.07 0l2.83-2.83a5 5 0 0 0-7.07-7.07l-1.5 1.5"/><path d="M14 11a5 5 0 0 0-7.07 0L4.1 13.83a5 5 0 0 0 7.07 7.07l1.5-1.5"/></svg>',
     calendario:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/><path d="M7 13h2M11 13h2M15 13h2M7 17h2M11 17h2"/></svg>',
+    logout:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg>',
   };
 
   const NAV = [
@@ -457,6 +458,7 @@
     { id:'financeiro', label:'Financeiro', icon:ICONS.financeiro },
     { id:'backup', label:'Backup', icon:ICONS.download },
     { id:'manual', label:'Manual', icon:ICONS.manual },
+    { id:'logout', label:'Sair', icon:ICONS.logout },
   ];
 
   /* ---------------- state ---------------- */
@@ -955,9 +957,7 @@
     if(!el) return;
     el.innerHTML = `
       <div class="user-email">${esc(currentUser && currentUser.email || '')}</div>
-      <button class="btn btn-ghost btn-sm" id="logoutBtn" style="width:100%;">Sair</button>
     `;
-    document.getElementById('logoutBtn').onclick = () => firebase.auth().signOut();
   }
 
   function renderNav(){
@@ -978,7 +978,10 @@
       if(n.id==='backup' && needsBackup()) badge = `<span class="badge badge-soft">!</span>`;
       return `<button class="nav-item ${ui.tab===n.id?'active':''}" data-nav="${n.id}">${n.icon}<span class="label">${n.label}</span>${badge}</button>`;
     }).join('');
-    nav.querySelectorAll('[data-nav]').forEach(b => b.onclick = () => { ui.tab = b.dataset.nav; renderAll(); });
+    nav.querySelectorAll('[data-nav]').forEach(b => b.onclick = () => {
+      if(b.dataset.nav === 'logout'){ firebase.auth().signOut(); return; }
+      ui.tab = b.dataset.nav; renderAll();
+    });
   }
 
   /* ================= AGENDA ================= */
