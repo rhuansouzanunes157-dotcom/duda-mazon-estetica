@@ -6,26 +6,26 @@
 <title>Agendar — Duda Mazon Estética</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,450..700&family=Work+Sans:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700&family=Montserrat:wght@400;500;600;700&display=swap">
 <style>
   :root{
-    --bg:#F3EEF0; --surface:#FFFFFF; --surface-muted:#FBF6F8; --line:#E6DEE2;
-    --ink:#2A2229; --ink-dim:#6E6169; --ink-faint:#9C8F96;
-    --primary:#4B3550; --primary-ink:#FFFFFF; --primary-tint:#EDE4EF;
-    --accent:#BE8A3D; --accent-tint:#F6EAD3;
-    --success:#3D7A54; --success-tint:#E1EFE4;
+    --bg:#F7F4EE; --surface:#FFFFFF; --surface-muted:#F3EEE4; --line:#E7D9C9;
+    --ink:#333333; --ink-dim:#6B6B66; --ink-faint:#9A968D;
+    --primary:#A8B7A0; --primary-ink:#333333; --primary-tint:#E7ECE4;
+    --accent:#B89B5E; --accent-tint:#F3EAD8;
+    --success:#4A7A45; --success-tint:#E3EEDF;
     --danger:#B14432; --danger-tint:#F6E2DE;
-    --shadow: 0 1px 2px rgba(42,34,41,0.06), 0 8px 24px -12px rgba(42,34,41,0.18);
+    --shadow: 0 1px 2px rgba(51,51,51,0.06), 0 8px 24px -12px rgba(51,51,51,0.18);
     --radius:14px; --radius-sm:9px;
     color-scheme: light;
   }
   @media (prefers-color-scheme: dark){
     :root{
-      --bg:#1D1720; --surface:#272029; --surface-muted:#231D26; --line:#3B3340;
-      --ink:#F1EBEE; --ink-dim:#B9AEB6; --ink-faint:#8A7E86;
-      --primary:#C9A8DA; --primary-ink:#241A2B; --primary-tint:#372B42;
-      --accent:#D8A85A; --accent-tint:#3B3122;
-      --success:#6FBB8B; --success-tint:#20342A;
+      --bg:#242320; --surface:#2D2C28; --surface-muted:#282722; --line:#3D3B34;
+      --ink:#F7F4EE; --ink-dim:#C9C4B6; --ink-faint:#9B968A;
+      --primary:#B7C6AF; --primary-ink:#232922; --primary-tint:#333B2F;
+      --accent:#D4B876; --accent-tint:#3B3120;
+      --success:#7FB579; --success-tint:#25301F;
       --danger:#E58A78; --danger-tint:#3A241F;
       --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 8px 24px -12px rgba(0,0,0,0.5);
     }
@@ -33,10 +33,10 @@
   *{ box-sizing:border-box; }
   body{
     margin:0; background:var(--bg); color:var(--ink);
-    font-family:"Work Sans", -apple-system, "Segoe UI", sans-serif;
+    font-family:"Montserrat", -apple-system, "Segoe UI", sans-serif;
     -webkit-font-smoothing:antialiased;
   }
-  h1,h2,h3{ font-family:"Fraunces", Georgia, serif; margin:0; }
+  h1,h2,h3{ font-family:"Cinzel", Georgia, serif; margin:0; }
   button, input, select, textarea{ font-family:inherit; font-size:inherit; color:inherit; }
   button{ cursor:pointer; }
   .wrap{ max-width:480px; margin:0 auto; padding:24px 18px 60px; min-height:100vh; }
@@ -65,7 +65,7 @@
   .svc-item:hover{ border-color:var(--primary); }
   .svc-item .n{ font-weight:600; font-size:14.5px; }
   .svc-item .d{ font-size:12.5px; color:var(--ink-faint); margin-top:2px; }
-  .svc-item .p{ font-family:"Fraunces",serif; font-weight:600; font-size:16px; white-space:nowrap; }
+  .svc-item .p{ font-family:"Cinzel",serif; font-weight:600; font-size:16px; white-space:nowrap; }
   .empty{ text-align:center; padding:30px 10px; color:var(--ink-dim); font-size:14px; }
   .slot-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-top:6px; }
   .slot-btn{
