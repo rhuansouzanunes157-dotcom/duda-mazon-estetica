@@ -616,7 +616,7 @@
       const unsub = realDb.collection(name).onSnapshot(snap => {
         store[name] = snap.docs.map(d => Object.assign({ id: d.id }, d.data()));
         readyFlags[name] = true;
-        if(!dbReady && COLLECTIONS.every(c => readyFlags[c])) dbReady = true;
+        if(!dbReady && COLLECTIONS.every(c => readyFlags[c])){ dbReady = true; reconcilePublicSlots(); }
         syncAndRender();
       }, err => {
         console.error('Erro ao sincronizar '+name, err);
@@ -836,6 +836,21 @@
   function deleteAppointmentSlot(id){
     if(!id) return;
     db.collection('publicSlots').doc(id).delete().catch(()=>{});
+  }
+  // corrige agendamentos que ficaram sem entrada em publicSlots (ex: criados antes da agenda pública
+  // existir, ou alguma falha de sincronização) — sem isso, o link público podia mostrar um horário
+  // como livre mesmo já estando ocupado no painel. Roda uma vez, assim que os dados carregam.
+  function reconcilePublicSlots(){
+    const slotsById = {};
+    (store.publicSlots||[]).forEach(s => { slotsById[s.id] = s; });
+    (store.appointments||[]).filter(a => a.status === 'agendado').forEach(a => {
+      const durationMin = a.duration || 60;
+      const expectedEnd = addMinutesToTime(a.time, durationMin);
+      const slot = slotsById[a.id];
+      if(!slot || slot.date !== a.date || slot.time !== a.time || slot.endTime !== expectedEnd){
+        writeAppointmentSlot(a.id, a.date, a.time, durationMin);
+      }
+    });
   }
   // normaliza telefone pra só dígitos — assim "(48) 99999-0000" e "48999990000" caem no mesmo índice
   function normalizePhone(phone){ return String(phone||'').replace(/\D/g, ''); }
