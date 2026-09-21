@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>Agendar — Duda Mazon Estética</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,450..700&family=Work+Sans:wght@400;500;600;700&display=swap">
+<style>
+  :root{
+    --bg:#F3EEF0; --surface:#FFFFFF; --surface-muted:#FBF6F8; --line:#E6DEE2;
+    --ink:#2A2229; --ink-dim:#6E6169; --ink-faint:#9C8F96;
+    --primary:#4B3550; --primary-ink:#FFFFFF; --primary-tint:#EDE4EF;
+    --accent:#BE8A3D; --accent-tint:#F6EAD3;
+    --success:#3D7A54; --success-tint:#E1EFE4;
+    --danger:#B14432; --danger-tint:#F6E2DE;
+    --shadow: 0 1px 2px rgba(42,34,41,0.06), 0 8px 24px -12px rgba(42,34,41,0.18);
+    --radius:14px; --radius-sm:9px;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg:#1D1720; --surface:#272029; --surface-muted:#231D26; --line:#3B3340;
+      --ink:#F1EBEE; --ink-dim:#B9AEB6; --ink-faint:#8A7E86;
+      --primary:#C9A8DA; --primary-ink:#241A2B; --primary-tint:#372B42;
+      --accent:#D8A85A; --accent-tint:#3B3122;
+      --success:#6FBB8B; --success-tint:#20342A;
+      --danger:#E58A78; --danger-tint:#3A241F;
+      --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 8px 24px -12px rgba(0,0,0,0.5);
+    }
+  }
+  *{ box-sizing:border-box; }
+  body{
+    margin:0; background:var(--bg); color:var(--ink);
+    font-family:"Work Sans", -apple-system, "Segoe UI", sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  h1,h2,h3{ font-family:"Fraunces", Georgia, serif; margin:0; }
+  button, input, select, textarea{ font-family:inherit; font-size:inherit; color:inherit; }
+  button{ cursor:pointer; }
+  .wrap{ max-width:480px; margin:0 auto; padding:24px 18px 60px; min-height:100vh; }
+  .header{ text-align:center; margin-bottom:22px; }
+  .header .name{ font-size:24px; font-weight:600; }
+  .header .sub{ font-size:13.5px; color:var(--ink-dim); margin-top:2px; }
+  .steps{ display:flex; gap:6px; justify-content:center; margin-bottom:22px; }
+  .steps .dot{ width:8px; height:8px; border-radius:50%; background:var(--line); }
+  .steps .dot.active{ background:var(--primary); }
+  .steps .dot.done{ background:var(--accent); }
+  .card{ background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow); padding:22px 20px; }
+  .card + .card{ margin-top:14px; }
+  .field{ display:flex; flex-direction:column; gap:5px; margin-bottom:14px; }
+  .field label{ font-size:12.5px; font-weight:600; color:var(--ink-dim); }
+  .field input, .field select{
+    border:1px solid var(--line); border-radius:var(--radius-sm); padding:11px 12px;
+    background:var(--surface); color:var(--ink); font-size:15px;
+  }
+  .field input:focus, .field select:focus{ outline:2px solid var(--primary-tint); border-color:var(--primary); }
+  .svc-list{ display:flex; flex-direction:column; gap:10px; }
+  .svc-item{
+    display:flex; justify-content:space-between; align-items:center; gap:10px;
+    border:1px solid var(--line); border-radius:var(--radius-sm); padding:14px 16px;
+    background:var(--surface-muted); cursor:pointer; text-align:left;
+  }
+  .svc-item:hover{ border-color:var(--primary); }
+  .svc-item .n{ font-weight:600; font-size:14.5px; }
+  .svc-item .d{ font-size:12.5px; color:var(--ink-faint); margin-top:2px; }
+  .svc-item .p{ font-family:"Fraunces",serif; font-weight:600; font-size:16px; white-space:nowrap; }
+  .empty{ text-align:center; padding:30px 10px; color:var(--ink-dim); font-size:14px; }
+  .slot-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-top:6px; }
+  .slot-btn{
+    border:1px solid var(--line); border-radius:var(--radius-sm); padding:10px 6px;
+    background:var(--surface-muted); font-weight:600; font-size:14px; text-align:center;
+  }
+  .slot-btn.selected{ background:var(--primary); color:var(--primary-ink); border-color:var(--primary); }
+  .btn{ border:none; border-radius:var(--radius-sm); padding:13px 18px; font-weight:600; font-size:15px; width:100%; }
+  .btn-primary{ background:var(--primary); color:var(--primary-ink); }
+  .btn-primary:disabled{ opacity:0.5; cursor:default; }
+  .btn-ghost{ background:transparent; color:var(--ink-dim); border:1px solid var(--line); }
+  .summary{ background:var(--surface-muted); border-radius:var(--radius-sm); padding:14px 16px; margin-bottom:16px; font-size:14px; line-height:1.6; }
+  .summary b{ font-weight:600; }
+  .msg-error{ background:var(--danger-tint); color:var(--danger); border-radius:var(--radius-sm); padding:11px 14px; font-size:13.5px; margin-bottom:14px; }
+  .back-link{ display:inline-block; margin-bottom:14px; color:var(--ink-dim); font-size:13.5px; text-decoration:none; }
+  .success{ text-align:center; padding:20px 4px; }
+  .success .emoji{ font-size:44px; margin-bottom:10px; }
+  .loading{ text-align:center; padding:40px 10px; color:var(--ink-faint); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="header">
+    <div class="name">Duda Mazon Estética</div>
+    <div class="sub">Agende seu horário</div>
+  </div>
+  <div class="steps" id="stepsDots"></div>
+  <div id="app"></div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-check-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script>
+(function(){
+  "use strict";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyAjl0Fln-qByfYyvYeSpDoy7k635IBvoWU",
+    authDomain: "duda-mazon-estetica.firebaseapp.com",
+    projectId: "duda-mazon-estetica",
+    storageBucket: "duda-mazon-estetica.firebasestorage.app",
+    messagingSenderId: "991037385923",
+    appId: "1:991037385923:web:090d6ff884930aed500676"
+  };
+
+  const BRL = new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' });
+  const fmtMoney = n => BRL.format(Number(n)||0);
+  const pad = n => String(n).padStart(2,'0');
+  const todayISO = () => { const d=new Date(); return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`; };
+  const maxDateISO = () => { const d=new Date(); d.setDate(d.getDate()+60); return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`; };
+  const fmtDateLong = iso => { if(!iso) return ''; const dt = new Date(iso+'T00:00:00'); return dt.toLocaleDateString('pt-BR',{weekday:'long', day:'2-digit', month:'long'}); };
+  const esc = s => String(s==null?'':s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const timeToMinutes = t => { const [h,m] = String(t||'0:0').split(':').map(Number); return h*60+m; };
+  const minutesToTime = m => { m = ((m%1440)+1440)%1440; return `${pad(Math.floor(m/60))}:${pad(m%60)}`; };
+  const overlaps = (aS,aE,bS,bE) => aS < bE && bS < aE;
+  const normalizePhone = phone => String(phone||'').replace(/\D/g, '');
+  const WEEKDAY_KEYS = ['sun','mon','tue','wed','thu','fri','sat'];
+
+  let db = null;
+  let initError = false;
+  try{
+    firebase.initializeApp(firebaseConfig);
+    try{
+      const appCheckProvider = new firebase.appCheck.ReCaptchaEnterpriseProvider('6Lcu774tAAAAALPoDtTgIkGLeg44pG8KINMeQF6p');
+      firebase.appCheck().activate(appCheckProvider, true);
+    }catch(e){ console.error('Falha ao iniciar o App Check', e); }
+    db = firebase.firestore();
+  }catch(e){
+    console.error('Falha ao iniciar', e);
+    initError = true;
+  }
+
+  const flow = {
+    mode: 'book', // 'book' | 'lookup'
+    step: 1, // 1 serviço, 2 data/horário, 3 dados, 4 sucesso
+    services: [],
+    weeklyHours: {},
+    service: null,
+    date: '',
+    time: '',
+    availableTimes: [],
+    slotsLoading: false,
+    slotsError: '',
+    clientName: '',
+    clientPhone: '',
+    submitting: false,
+    submitError: '',
+    lookupPhone: '',
+    lookupLoading: false,
+    lookupSearched: false,
+    lookupError: '',
+    lookupResults: [],
+    cancelingId: null,
+  };
+
+  function render(){
+    renderSteps();
+    const app = document.getElementById('app');
+    if(initError){ app.innerHTML = `<div class="card"><div class="msg-error">Não foi possível carregar a página agora. Tente de novo em instantes ou fale direto com a Duda.</div></div>`; return; }
+    if(flow.mode === 'lookup') app.innerHTML = viewLookup();
+    else if(flow.step === 1) app.innerHTML = viewServices();
+    else if(flow.step === 2) app.innerHTML = viewDateTime();
+    else if(flow.step === 3) app.innerHTML = viewDetails();
+    else app.innerHTML = viewSuccess();
+    wire();
+  }
+
+  function renderSteps(){
+    const el = document.getElementById('stepsDots');
+    if(flow.mode === 'lookup' || flow.step === 4){ el.innerHTML = ''; return; }
+    el.innerHTML = [1,2,3].map(n => `<span class="dot ${flow.step===n?'active':flow.step>n?'done':''}"></span>`).join('');
+  }
+
+  /* ---------- meus agendamentos (buscar por telefone) ---------- */
+  function viewLookup(){
+    let resultsHTML = '';
+    if(flow.lookupLoading){
+      resultsHTML = `<div class="loading">Buscando...</div>`;
+    } else if(flow.lookupError){
+      resultsHTML = `<div class="msg-error">${esc(flow.lookupError)}</div>`;
+    } else if(flow.lookupResults.length){
+      resultsHTML = `<div class="svc-list">` + flow.lookupResults.map(b => `
+        <div class="svc-item" style="cursor:default;">
+          <div>
+            <div class="n">${esc(b.serviceName)}</div>
+            <div class="d">${fmtDateLong(b.date)} às ${esc(b.time)}</div>
+          </div>
+          <button type="button" class="btn btn-ghost" data-cancel-booking="${b.id}" style="width:auto;padding:8px 14px;font-size:13px;" ${flow.cancelingId===b.id?'disabled':''}>${flow.cancelingId===b.id?'Cancelando...':'Desmarcar'}</button>
+        </div>`).join('') + `</div>`;
+    } else if(flow.lookupSearched){
+      resultsHTML = `<div class="empty">Nenhum agendamento futuro encontrado com esse telefone.</div>`;
+    }
+    return `
+      <a href="#" class="back-link" id="backToBook">‹ Agendar um horário</a>
+      <div class="card">
+        <h2 style="font-size:18px;margin-bottom:14px;">Meus agendamentos</h2>
+        <div class="field"><label for="lookupPhoneInput">Seu telefone</label><input type="tel" id="lookupPhoneInput" value="${esc(flow.lookupPhone)}" placeholder="(00) 00000-0000"></div>
+        <button type="button" class="btn btn-primary" id="lookupBtn" style="margin-bottom:16px;">Buscar</button>
+        ${resultsHTML}
+      </div>
+    `;
+  }
+
+  /* ---------- passo 1: serviço ---------- */
+  function viewServices(){
+    if(!flow.services.length){
+      return `<div class="card"><div class="loading">Carregando serviços...</div></div>`;
+    }
+    const items = flow.services.map(s => `
+      <button type="button" class="svc-item" data-svc="${s.id}">
+        <div>
+          <div class="n">${esc(s.name)}</div>
+          <div class="d">${s.duration||60} min</div>
+        </div>
+        <div class="p">${fmtMoney(s.price)}</div>
+      </button>`).join('');
+    return `<div class="card"><h2 style="font-size:18px;margin-bottom:14px;">Qual serviço você quer marcar?</h2><div class="svc-list">${items}</div></div>
+      <div style="text-align:center;margin-top:16px;"><a href="#" id="toLookup" style="color:var(--ink-dim);font-size:13.5px;">Já agendei — ver ou cancelar meus horários</a></div>`;
+  }
+
+  /* ---------- passo 2: data + horário ---------- */
+  function viewDateTime(){
+    const svc = flow.service;
+    let slotsHTML = '';
+    if(flow.slotsLoading){
+      slotsHTML = `<div class="loading">Buscando horários livres...</div>`;
+    } else if(flow.slotsError){
+      slotsHTML = `<div class="msg-error">${esc(flow.slotsError)}</div>`;
+    } else if(flow.date){
+      if(!flow.availableTimes.length){
+        slotsHTML = `<div class="empty">Nenhum horário livre nesse dia. Tente outra data.</div>`;
+      } else {
+        slotsHTML = `<div class="slot-grid">${flow.availableTimes.map(t => `<button type="button" class="slot-btn ${flow.time===t?'selected':''}" data-time="${t}">${t}</button>`).join('')}</div>`;
+      }
+    }
+    return `
+      <a href="#" class="back-link" id="backTo1">‹ Trocar serviço</a>
+      <div class="card">
+        <h2 style="font-size:18px;margin-bottom:4px;">${esc(svc.name)}</h2>
+        <div style="color:var(--ink-faint);font-size:13px;margin-bottom:16px;">${svc.duration||60} min · ${fmtMoney(svc.price)}</div>
+        <div class="field"><label for="dateInput">Data</label><input type="date" id="dateInput" min="${todayISO()}" max="${maxDateISO()}" value="${flow.date}"></div>
+        ${flow.date ? `<div class="field"><label>Horários livres em ${fmtDateLong(flow.date)}</label>${slotsHTML}</div>` : ''}
+      </div>
+      <button type="button" class="btn btn-primary" id="toStep3" style="margin-top:16px;" ${flow.time ? '' : 'disabled'}>Continuar</button>
+    `;
+  }
+
+  /* ---------- passo 3: dados da cliente ---------- */
+  function viewDetails(){
+    const svc = flow.service;
+    return `
+      <a href="#" class="back-link" id="backTo2">‹ Trocar horário</a>
+      <div class="card">
+        <div class="summary">
+          <div><b>${esc(svc.name)}</b></div>
+          <div>${fmtDateLong(flow.date)} às <b>${flow.time}</b></div>
+          <div>${fmtMoney(svc.price)}</div>
+        </div>
+        <div class="field"><label for="nameInput">Seu nome</label><input type="text" id="nameInput" value="${esc(flow.clientName)}" placeholder="Nome completo"></div>
+        <div class="field"><label for="phoneInput">Seu telefone (WhatsApp)</label><input type="tel" id="phoneInput" value="${esc(flow.clientPhone)}" placeholder="(00) 00000-0000"></div>
+        ${flow.submitError ? `<div class="msg-error">${esc(flow.submitError)}</div>` : ''}
+        <button type="button" class="btn btn-primary" id="confirmBtn" ${flow.submitting ? 'disabled' : ''}>${flow.submitting ? 'Agendando...' : 'Confirmar agendamento'}</button>
+      </div>
+    `;
+  }
+
+  /* ---------- passo 4: sucesso ---------- */
+  function viewSuccess(){
+    const svc = flow.service;
+    return `
+      <div class="card success">
+        <div class="emoji">✅</div>
+        <h2 style="font-size:19px;margin-bottom:8px;">Agendamento confirmado!</h2>
+        <div class="summary" style="text-align:left;">
+          <div><b>${esc(svc.name)}</b></div>
+          <div>${fmtDateLong(flow.date)} às <b>${flow.time}</b></div>
+          <div>${esc(flow.clientName)}</div>
+        </div>
+        <p style="font-size:13.5px;color:var(--ink-dim);">A Duda vai te esperar nesse horário. Qualquer imprevisto, entre em contato direto com ela.</p>
+        <button type="button" class="btn btn-ghost" id="restartBtn" style="margin-top:10px;">Agendar outro horário</button>
+      </div>
+    `;
+  }
+
+  function wire(){
+    if(flow.mode === 'lookup'){
+      document.getElementById('backToBook').onclick = (e) => { e.preventDefault(); flow.mode='book'; render(); };
+      const phoneInput = document.getElementById('lookupPhoneInput');
+      phoneInput.oninput = () => flow.lookupPhone = phoneInput.value;
+      phoneInput.onkeydown = (e) => { if(e.key === 'Enter') doLookup(); };
+      document.getElementById('lookupBtn').onclick = doLookup;
+      document.querySelectorAll('[data-cancel-booking]').forEach(b => b.onclick = () => cancelBooking(b.dataset.cancelBooking));
+      return;
+    }
+    if(flow.step === 1){
+      document.querySelectorAll('[data-svc]').forEach(b => b.onclick = () => {
+        flow.service = flow.services.find(s => s.id === b.dataset.svc);
+        flow.step = 2; flow.date=''; flow.time=''; flow.availableTimes=[];
+        render();
+      });
+      const toLookup = document.getElementById('toLookup');
+      if(toLookup) toLookup.onclick = (e) => { e.preventDefault(); flow.mode='lookup'; flow.lookupResults=[]; flow.lookupSearched=false; flow.lookupError=''; render(); };
+    }
+    else if(flow.step === 2){
+      document.getElementById('backTo1').onclick = (e) => { e.preventDefault(); flow.step=1; render(); };
+      const dateInput = document.getElementById('dateInput');
+      dateInput.onchange = () => {
+        flow.date = dateInput.value; flow.time=''; flow.availableTimes=[];
+        if(flow.date) loadTimesForDate(flow.date);
+        else render();
+      };
+      document.querySelectorAll('[data-time]').forEach(b => b.onclick = () => { flow.time = b.dataset.time; render(); });
+      document.getElementById('toStep3').onclick = () => { if(flow.time){ flow.step=3; render(); } };
+    }
+    else if(flow.step === 3){
+      document.getElementById('backTo2').onclick = (e) => { e.preventDefault(); flow.step=2; render(); };
+      const nameInput = document.getElementById('nameInput');
+      const phoneInput = document.getElementById('phoneInput');
+      nameInput.oninput = () => flow.clientName = nameInput.value;
+      phoneInput.oninput = () => flow.clientPhone = phoneInput.value;
+      document.getElementById('confirmBtn').onclick = submitBooking;
+    }
+    else if(flow.step === 4){
+      document.getElementById('restartBtn').onclick = () => {
+        flow.step = 1; flow.service=null; flow.date=''; flow.time=''; flow.availableTimes=[];
+        flow.clientName=''; flow.clientPhone=''; flow.submitError='';
+        render();
+      };
+    }
+  }
+
+  async function loadServices(){
+    try{
+      const snap = await db.collection('services').get();
+      flow.services = snap.docs.map(d => Object.assign({id:d.id}, d.data())).filter(s => s.active !== false);
+    }catch(e){ console.error('Erro ao carregar serviços', e); }
+    render();
+  }
+
+  async function loadWeeklyHours(){
+    try{
+      const doc = await db.collection('workHours').doc('weekly').get();
+      flow.weeklyHours = (doc.exists && doc.data().days) || {};
+    }catch(e){ console.error('Erro ao carregar horários', e); flow.weeklyHours = {}; }
+  }
+
+  async function resolveHoursForDate(dateISO){
+    try{
+      const excDoc = await db.collection('workHoursExceptions').doc(dateISO).get();
+      if(excDoc.exists){
+        const e = excDoc.data();
+        return { enabled: !!e.enabled, start: e.start||'', end: e.end||'' };
+      }
+    }catch(e){ /* segue pro padrão semanal */ }
+    const dow = WEEKDAY_KEYS[new Date(dateISO+'T00:00:00').getDay()];
+    const day = flow.weeklyHours[dow];
+    if(!day) return { enabled:false };
+    return { enabled: !!day.enabled, start: day.start||'', end: day.end||'' };
+  }
+
+  async function loadOccupiedSlots(dateISO){
+    const snap = await db.collection('publicSlots').where('date','==',dateISO).get();
+    return snap.docs.map(d => d.data());
+  }
+
+  async function loadTimesForDate(dateISO){
+    flow.slotsLoading = true; flow.slotsError=''; flow.availableTimes=[];
+    render();
+    try{
+      const hours = await resolveHoursForDate(dateISO);
+      if(!hours.enabled || !hours.start || !hours.end){
+        flow.availableTimes = [];
+        flow.slotsLoading = false;
+        render();
+        return;
+      }
+      const occupied = await loadOccupiedSlots(dateISO);
+      const durationMin = (flow.service && flow.service.duration) || 60;
+      const startMin = timeToMinutes(hours.start);
+      const endMin = timeToMinutes(hours.end);
+      const STEP = 30;
+      const isToday = dateISO === todayISO();
+      const now = new Date();
+      const nowMin = now.getHours()*60 + now.getMinutes() + 30; // pelo menos 30min de antecedência
+      const times = [];
+      for(let t = startMin; t + durationMin <= endMin; t += STEP){
+        if(isToday && t < nowMin) continue;
+        const tEnd = t + durationMin;
+        const conflict = occupied.some(o => overlaps(t, tEnd, timeToMinutes(o.time), timeToMinutes(o.endTime)));
+        if(!conflict) times.push(minutesToTime(t));
+      }
+      flow.availableTimes = times;
+    }catch(e){
+      console.error('Erro ao calcular horários', e);
+      flow.slotsError = 'Não foi possível carregar os horários agora. Tente de novo.';
+    }
+    flow.slotsLoading = false;
+    render();
+  }
+
+  async function submitBooking(){
+    const name = (flow.clientName||'').trim();
+    const phone = (flow.clientPhone||'').trim();
+    if(!name){ flow.submitError = 'Preencha seu nome.'; render(); return; }
+    if(!phone){ flow.submitError = 'Preencha seu telefone.'; render(); return; }
+    flow.clientName = name; flow.clientPhone = phone;
+    flow.submitting = true; flow.submitError=''; render();
+    try{
+      const svc = flow.service;
+      const durationMin = svc.duration || 60;
+      const startMin = timeToMinutes(flow.time);
+      const endTime = minutesToTime(startMin + durationMin);
+      // reconfere na hora, pra reduzir chance de dois clientes pegarem o mesmo horário ao mesmo tempo
+      const occupied = await loadOccupiedSlots(flow.date);
+      const conflict = occupied.some(o => overlaps(startMin, startMin+durationMin, timeToMinutes(o.time), timeToMinutes(o.endTime)));
+      if(conflict){
+        flow.submitting = false;
+        flow.submitError = 'Esse horário acabou de ser reservado por outra pessoa. Escolha outro.';
+        flow.step = 2; flow.time='';
+        await loadTimesForDate(flow.date);
+        return;
+      }
+      const apptRef = db.collection('appointments').doc();
+      const batch = db.batch();
+      batch.set(apptRef, {
+        clientName: name, clientPhone: phone,
+        serviceId: svc.id, serviceName: svc.name, servicePrice: svc.price,
+        serviceProductsUsed: svc.productsUsed || [], duration: durationMin,
+        date: flow.date, time: flow.time, endTime,
+        extraProducts: [], notes: '',
+        status: 'agendado', source: 'public', createdAt: Date.now(),
+      });
+      batch.set(db.collection('publicSlots').doc(apptRef.id), { date: flow.date, time: flow.time, endTime });
+      const normPhone = normalizePhone(phone);
+      if(normPhone){
+        batch.set(db.collection('clientIndex').doc(normPhone).collection('bookings').doc(apptRef.id), {
+          serviceName: svc.name, date: flow.date, time: flow.time, price: svc.price, status:'agendado', createdAt: Date.now(),
+        });
+      }
+      await batch.commit();
+      flow.submitting = false;
+      flow.step = 4;
+      render();
+    }catch(e){
+      console.error('Erro ao confirmar agendamento', e);
+      flow.submitting = false;
+      flow.submitError = 'Não foi possível confirmar agora. Tente de novo em instantes.';
+      render();
+    }
+  }
+
+  async function doLookup(){
+    const norm = normalizePhone(flow.lookupPhone);
+    if(!norm){ flow.lookupError = 'Digite um telefone válido.'; render(); return; }
+    flow.lookupLoading = true; flow.lookupError = ''; render();
+    try{
+      const snap = await db.collection('clientIndex').doc(norm).collection('bookings').where('status','==','agendado').get();
+      flow.lookupResults = snap.docs.map(d => Object.assign({id:d.id}, d.data())).sort((a,b) => (a.date+a.time).localeCompare(b.date+b.time));
+    }catch(e){
+      console.error('Erro ao buscar agendamentos', e);
+      flow.lookupError = 'Não foi possível buscar agora. Tente de novo em instantes.';
+    }
+    flow.lookupLoading = false;
+    flow.lookupSearched = true;
+    render();
+  }
+
+  async function cancelBooking(id){
+    const norm = normalizePhone(flow.lookupPhone);
+    if(!norm) return;
+    flow.cancelingId = id; render();
+    try{
+      const batch = db.batch();
+      batch.update(db.collection('appointments').doc(id), { status:'cancelado' });
+      batch.update(db.collection('clientIndex').doc(norm).collection('bookings').doc(id), { status:'cancelado' });
+      batch.delete(db.collection('publicSlots').doc(id));
+      await batch.commit();
+      flow.lookupResults = flow.lookupResults.filter(b => b.id !== id);
+    }catch(e){
+      console.error('Erro ao desmarcar', e);
+      flow.lookupError = 'Não foi possível desmarcar agora. Tente de novo em instantes.';
+    }
+    flow.cancelingId = null;
+    render();
+  }
+
+  render();
+  if(db){
+    loadServices();
+    loadWeeklyHours();
+  }
+})();
+</script>
+</body>
+</html>
