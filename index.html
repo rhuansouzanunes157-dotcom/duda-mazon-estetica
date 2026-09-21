@@ -643,11 +643,13 @@
       firebase.appCheck().activate(appCheckProvider, true);
     }catch(e){ console.error('Falha ao iniciar o App Check', e); }
     firebase.auth().onAuthStateChanged(user => {
+      const wasLoggedIn = !!currentUser;
       currentUser = user;
       authBusy = false;
       if(user){ startFirestoreSync(); }
       else { stopFirestoreSync(); }
       renderAll();
+      if(user && !wasLoggedIn){ window.scrollTo(0, 0); }
     }, err => {
       console.error('Erro de autenticação', err);
       connError = true;
