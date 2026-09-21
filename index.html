@@ -979,7 +979,7 @@
       return `<button class="nav-item ${ui.tab===n.id?'active':''}" data-nav="${n.id}">${n.icon}<span class="label">${n.label}</span>${badge}</button>`;
     }).join('');
     nav.querySelectorAll('[data-nav]').forEach(b => b.onclick = () => {
-      if(b.dataset.nav === 'logout'){ firebase.auth().signOut(); return; }
+      if(b.dataset.nav === 'logout'){ confirmModal('Sair da sua conta?', () => firebase.auth().signOut()); return; }
       ui.tab = b.dataset.nav; renderAll();
     });
   }
