@@ -96,6 +96,41 @@
   button{ cursor:pointer; }
   .tabular{ font-variant-numeric: tabular-nums; }
 
+  /* ---------- login ---------- */
+  .login-screen{
+    min-height:100vh;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    background:var(--bg);
+    padding:20px;
+  }
+  .login-card{
+    width:100%;
+    max-width:360px;
+    background:var(--surface);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    box-shadow:var(--shadow);
+    padding:32px 28px;
+  }
+  .login-brand{ text-align:center; margin-bottom:22px; }
+  .login-brand .name{ font-family:"Fraunces",serif; font-weight:600; font-size:24px; color:var(--ink); }
+  .login-brand .sub{ font-size:13px; color:var(--ink-faint); margin-top:2px; }
+  .login-error{
+    background:var(--danger-tint); color:var(--danger);
+    border-radius:var(--radius-sm); padding:10px 12px;
+    font-size:13px; margin-bottom:14px;
+  }
+  .sidebar-footer{
+    margin-top:auto;
+    padding-top:14px;
+    border-top:1px solid var(--line);
+    font-size:12px;
+    color:var(--ink-faint);
+  }
+  .sidebar-footer .user-email{ font-size:12.5px; color:var(--ink-dim); margin-bottom:6px; word-break:break-all; }
+
   /* ---------- shell ---------- */
   .app-shell{
     display:flex;
@@ -183,6 +218,31 @@
   .pillbar{ display:flex; gap:6px; background:var(--surface-muted); padding:4px; border-radius:999px; width:fit-content; }
   .pill{ border:none; background:transparent; padding:7px 16px; border-radius:999px; font-weight:600; font-size:13px; color:var(--ink-dim); }
   .pill.active{ background:var(--surface); color:var(--primary); box-shadow:var(--shadow); }
+
+  /* ---------- calendário semanal ---------- */
+  .cal-toolbar{ display:flex; gap:8px; align-items:center; margin-bottom:14px; flex-wrap:wrap; }
+  .cal-grid-wrap{ overflow-x:auto; border:1px solid var(--line); border-radius:var(--radius); background:var(--surface); }
+  .cal-grid{ display:grid; grid-template-columns:56px repeat(7,minmax(112px,1fr)); min-width:840px; }
+  .cal-row{ display:contents; }
+  .cal-head-row .cal-daycol-head, .cal-head-row .cal-time{ position:sticky; top:0; background:var(--surface); z-index:1; border-bottom:1px solid var(--line); }
+  .cal-daycol-head{ padding:10px 6px; text-align:center; border-left:1px solid var(--line); }
+  .cal-daycol-head.is-today{ background:var(--primary-tint); }
+  .cal-daycol-head .dow{ font-size:11px; color:var(--ink-faint); text-transform:uppercase; letter-spacing:0.03em; }
+  .cal-daycol-head .dnum{ font-family:"Fraunces",serif; font-weight:600; font-size:16px; }
+  .cal-time{ font-size:11px; color:var(--ink-faint); padding:6px 6px; text-align:right; position:sticky; left:0; background:var(--surface); border-right:1px solid var(--line); white-space:nowrap; }
+  .cal-cell{ border-left:1px solid var(--line); border-top:1px solid var(--line); min-height:34px; padding:2px; display:flex; flex-direction:column; gap:2px; justify-content:center; }
+  .cal-cell.is-closed{ background:repeating-linear-gradient(135deg, var(--surface-muted), var(--surface-muted) 6px, var(--line) 6px, var(--line) 7px); opacity:0.5; }
+  .cal-cell.is-open .cal-add{
+    width:100%; height:100%; min-height:28px; border:1px dashed var(--line); border-radius:6px;
+    background:transparent; color:var(--ink-faint); font-size:14px; opacity:0; transition:opacity 0.1s;
+  }
+  .cal-cell.is-open:hover .cal-add{ opacity:1; }
+  .cal-chip{
+    width:100%; text-align:left; border:none; border-radius:6px; padding:4px 6px;
+    background:var(--primary-tint); color:var(--primary); font-size:11.5px; font-weight:600;
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  }
+  .cal-chip.is-done{ background:var(--success-tint); color:var(--success); }
 
   /* ---------- cards / lists ---------- */
   .card{ background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); }
@@ -305,7 +365,21 @@
 </head>
 <body>
 
-<div class="app-shell">
+<div class="login-screen" id="loginScreen" hidden>
+  <div class="login-card">
+    <div class="login-brand">
+      <div class="name">Duda Mazon</div>
+      <div class="sub">Estética — painel administrativo</div>
+    </div>
+    <div class="field"><label for="loginEmail">E-mail</label><input type="email" id="loginEmail" autocomplete="username" placeholder="seu@email.com"></div>
+    <div class="field"><label for="loginPassword">Senha</label><input type="password" id="loginPassword" autocomplete="current-password" placeholder="••••••••"></div>
+    <div class="login-error" id="loginError" hidden></div>
+    <button class="btn btn-primary" id="loginSubmit" style="width:100%;">Entrar</button>
+    <button type="button" class="link-btn" id="loginForgot" style="margin-top:12px;">Esqueci minha senha</button>
+  </div>
+</div>
+
+<div class="app-shell" id="appShell" hidden>
   <aside class="sidebar">
     <div class="brand">
       <div class="brand-mark">
@@ -317,6 +391,7 @@
       </div>
     </div>
     <nav class="nav" id="navList"></nav>
+    <div class="sidebar-footer" id="sidebarFooter"></div>
   </aside>
 
   <main class="main" id="main"></main>
@@ -329,6 +404,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-check-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script>
 (function(){
   "use strict";
@@ -364,10 +440,15 @@
     doses:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3c4 5 6.5 8.7 6.5 12a6.5 6.5 0 0 1-13 0C5.5 11.7 8 8 12 3Z"/></svg>',
     manual:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2Z"/></svg>',
     pacotes:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8 12 3 3 8l9 5 9-5Z"/><path d="M3 8v8l9 5 9-5V8"/><path d="M12 13v8"/></svg>',
+    horarios:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l3 2"/><path d="M9 2h6"/></svg>',
+    link:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.07 0l2.83-2.83a5 5 0 0 0-7.07-7.07l-1.5 1.5"/><path d="M14 11a5 5 0 0 0-7.07 0L4.1 13.83a5 5 0 0 0 7.07 7.07l1.5-1.5"/></svg>',
+    calendario:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/><path d="M7 13h2M11 13h2M15 13h2M7 17h2M11 17h2"/></svg>',
   };
 
   const NAV = [
     { id:'agenda', label:'Agenda', icon:ICONS.agenda },
+    { id:'calendario', label:'Calendário', icon:ICONS.calendario },
+    { id:'horarios', label:'Horários', icon:ICONS.horarios },
     { id:'catalog', label:'Serviços e Produtos', icon:ICONS.catalog },
     { id:'pacotes', label:'Pacotes', icon:ICONS.pacotes },
     { id:'doses', label:'Doses por cliente', icon:ICONS.doses },
@@ -378,8 +459,8 @@
 
   /* ---------------- state ---------------- */
   const STORAGE_KEY = 'duda-mazon-studio-data-v1';
-  const state = { services:[], products:[], appointments:[], financeiro:[], doseLots:[], packages:[] };
-  const ui = { tab:'agenda', sub:'servicos', date: todayISO(), month: monthISO() };
+  const state = { services:[], products:[], appointments:[], financeiro:[], doseLots:[], packages:[], workHours:[], workHoursExceptions:[], publicSlots:[] };
+  const ui = { tab:'agenda', sub:'servicos', date: todayISO(), month: monthISO(), calWeekStart: startOfWeek(todayISO()) };
 
   /* ---------------- local storage (sem login, dados no navegador) ---------------- */
   function seedExampleData(){
@@ -394,9 +475,9 @@
         { id:toxina, name:'Toxina Botulínica', price:0, trackStock:false, stock:null, minStock:null, doseControl:true, doseUnit:'mg', active:true, createdAt:1011, isExample:true },
       ],
       services: [
-        { id:svcRelax, name:'Massagem Relaxante 60min', price:150, productsUsed:[{productId:oleo,name:'Óleo de Amêndoas Doces 200ml',qty:1}], active:true, createdAt:1003, isExample:true },
-        { id:svcDren, name:'Drenagem Linfática 50min', price:130, productsUsed:[], active:true, createdAt:1004, isExample:true },
-        { id:svcVelas, name:'Massagem com Velas Aromáticas 75min', price:190, productsUsed:[{productId:vela,name:'Vela Aromática',qty:1}], active:true, createdAt:1005, isExample:true },
+        { id:svcRelax, name:'Massagem Relaxante 60min', price:150, duration:60, productsUsed:[{productId:oleo,name:'Óleo de Amêndoas Doces 200ml',qty:1}], active:true, createdAt:1003, isExample:true },
+        { id:svcDren, name:'Drenagem Linfática 50min', price:130, duration:50, productsUsed:[], active:true, createdAt:1004, isExample:true },
+        { id:svcVelas, name:'Massagem com Velas Aromáticas 75min', price:190, duration:75, productsUsed:[{productId:vela,name:'Vela Aromática',qty:1}], active:true, createdAt:1005, isExample:true },
       ],
       appointments: [
         { id:'appt-ana', clientName:'Ana Beatriz', clientPhone:'(48) 99911-2233', serviceId:svcRelax, serviceName:'Massagem Relaxante 60min', servicePrice:150, serviceProductsUsed:[{productId:oleo,name:'Óleo de Amêndoas Doces 200ml',qty:1}], date:hoje, time:'09:00', extraProducts:[], notes:'', status:'agendado', createdAt:1006, isExample:true },
@@ -429,9 +510,12 @@
     catch(e){ console.warn('Não foi possível salvar o cache local', e); }
   }
 
-  let store = loadStore() || { services:[], products:[], appointments:[], financeiro:[], doseLots:[], packages:[], meta:{} };
+  let store = loadStore() || { services:[], products:[], appointments:[], financeiro:[], doseLots:[], packages:[], workHours:[], workHoursExceptions:[], publicSlots:[], meta:{} };
   if(!Array.isArray(store.doseLots)) store.doseLots = [];
   if(!Array.isArray(store.packages)) store.packages = [];
+  if(!Array.isArray(store.workHours)) store.workHours = [];
+  if(!Array.isArray(store.workHoursExceptions)) store.workHoursExceptions = [];
+  if(!Array.isArray(store.publicSlots)) store.publicSlots = [];
 
   function syncAndRender(){
     state.services = store.services;
@@ -440,6 +524,9 @@
     state.financeiro = store.financeiro;
     state.doseLots = store.doseLots;
     state.packages = store.packages;
+    state.workHours = store.workHours;
+    state.workHoursExceptions = store.workHoursExceptions;
+    state.publicSlots = store.publicSlots;
     saveStore();
     renderAll();
   }
@@ -454,7 +541,7 @@
     appId: "1:991037385923:web:090d6ff884930aed500676"
   };
 
-  const COLLECTIONS = ['services','products','appointments','financeiro','doseLots','packages'];
+  const COLLECTIONS = ['services','products','appointments','financeiro','doseLots','packages','workHours','workHoursExceptions','publicSlots'];
 
   function sanitizeForFirestore(obj){
     if(Array.isArray(obj)) return obj.map(sanitizeForFirestore);
@@ -466,28 +553,36 @@
     return obj;
   }
 
-  function makeDb(realDb){
+  function wrapCollection(ref){
     return {
-      collection(name){
-        const ref = realDb.collection(name);
+      add(data){ return ref.add(sanitizeForFirestore(data)); },
+      doc(id){
+        const dref = id ? ref.doc(id) : ref.doc();
         return {
-          add(data){ return ref.add(sanitizeForFirestore(data)); },
-          doc(id){
-            const dref = ref.doc(id);
-            return {
-              update(data){ return dref.update(sanitizeForFirestore(data)); },
-              delete(){ return dref.delete(); },
-            };
-          },
-          where(field, op, value){ return ref.where(field, op, value); },
+          id: dref.id,
+          set(data, opts){ return dref.set(sanitizeForFirestore(data), opts); },
+          update(data){ return dref.update(sanitizeForFirestore(data)); },
+          delete(){ return dref.delete(); },
+          get(){ return dref.get(); },
+          collection(subName){ return wrapCollection(dref.collection(subName)); },
         };
       },
+      where(field, op, value){ return ref.where(field, op, value); },
+      get(){ return ref.get(); },
+    };
+  }
+  function makeDb(realDb){
+    return {
+      collection(name){ return wrapCollection(realDb.collection(name)); },
+      batch(){ return realDb.batch(); },
     };
   }
 
   let db = null;
   let dbReady = false;
   let connError = false;
+  let dbSyncStarted = false;
+  let unsubscribers = [];
   const readyFlags = {};
 
   async function restoreFromBackup(parsed){
@@ -497,24 +592,24 @@
       const items = Array.isArray(parsed[name]) ? parsed[name] : [];
       for(const item of items){
         const clone = Object.assign({}, item);
+        const id = clone.id;
         delete clone.id;
-        await db.collection(name).add(clone);
+        // preserva o id original pra não quebrar vínculos entre coleções (ex: packageId, doseLotId, appointmentId)
+        if(id) await db.collection(name).doc(id).set(clone);
+        else await db.collection(name).add(clone);
       }
     }
   }
 
-  try{
-    firebase.initializeApp(firebaseConfig);
-    try{
-      const appCheckProvider = new firebase.appCheck.ReCaptchaEnterpriseProvider('6Lcu774tAAAAALPoDtTgIkGLeg44pG8KINMeQF6p');
-      firebase.appCheck().activate(appCheckProvider, true);
-    }catch(e){ console.error('Falha ao iniciar o App Check', e); }
+  function startFirestoreSync(){
+    if(dbSyncStarted) return;
+    dbSyncStarted = true;
     const realDb = firebase.firestore();
     try{ realDb.enablePersistence({ synchronizeTabs: true }); }
     catch(e){ /* persistência offline indisponível neste navegador/aba — segue só online */ }
     db = makeDb(realDb);
     COLLECTIONS.forEach(name => {
-      realDb.collection(name).onSnapshot(snap => {
+      const unsub = realDb.collection(name).onSnapshot(snap => {
         store[name] = snap.docs.map(d => Object.assign({ id: d.id }, d.data()));
         readyFlags[name] = true;
         if(!dbReady && COLLECTIONS.every(c => readyFlags[c])) dbReady = true;
@@ -524,22 +619,50 @@
         connError = true;
         renderAll();
       });
+      unsubscribers.push(unsub);
+    });
+  }
+
+  function stopFirestoreSync(){
+    unsubscribers.forEach(u => { try{ u(); }catch(e){} });
+    unsubscribers = [];
+    dbSyncStarted = false;
+    dbReady = false;
+    db = null;
+    Object.keys(readyFlags).forEach(k => delete readyFlags[k]);
+  }
+
+  let currentUser = null;
+  let authError = '';
+  let authBusy = false;
+
+  try{
+    firebase.initializeApp(firebaseConfig);
+    try{
+      const appCheckProvider = new firebase.appCheck.ReCaptchaEnterpriseProvider('6Lcu774tAAAAALPoDtTgIkGLeg44pG8KINMeQF6p');
+      firebase.appCheck().activate(appCheckProvider, true);
+    }catch(e){ console.error('Falha ao iniciar o App Check', e); }
+    firebase.auth().onAuthStateChanged(user => {
+      currentUser = user;
+      authBusy = false;
+      if(user){ startFirestoreSync(); }
+      else { stopFirestoreSync(); }
+      renderAll();
+    }, err => {
+      console.error('Erro de autenticação', err);
+      connError = true;
+      renderAll();
     });
   }catch(e){
     console.error('Falha ao iniciar o banco de dados', e);
     connError = true;
   }
 
-  syncAndRender();
+  renderAll();
 
   /* ---------------- backup (baixar / restaurar) ---------------- */
-  let downloadsCap = null;
-  let downloadsState = 'pending'; // 'pending' | 'ready' | 'unavailable'
-  (async function initDownloads(){
-    try{ downloadsCap = await window.claude?.use?.('downloads'); }catch(e){ downloadsCap = null; }
-    downloadsState = downloadsCap ? 'ready' : 'unavailable';
-    renderAll();
-  })();
+  // download real via Blob + link temporário — funciona em qualquer navegador, sem depender de nenhuma API externa
+  const downloadsState = 'ready';
 
   function needsBackup(){
     const last = store.meta && store.meta.lastBackupAt;
@@ -547,7 +670,6 @@
   }
 
   async function exportBackup(){
-    if(!downloadsCap) return;
     const payload = {
       app: 'Duda Mazon Estética',
       exportedAt: new Date().toISOString(),
@@ -557,15 +679,25 @@
       financeiro: store.financeiro,
       doseLots: store.doseLots,
       packages: store.packages,
+      workHours: store.workHours,
+      workHoursExceptions: store.workHoursExceptions,
+      publicSlots: store.publicSlots,
     };
     const filename = `backup-duda-mazon-${todayISO()}.json`;
     try{
-      await downloadsCap.save({ filename, data: JSON.stringify(payload, null, 2) });
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type:'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 4000);
       store.meta = Object.assign({}, store.meta, { lastBackupAt: Date.now() });
       saveStore(); syncAndRender();
-      infoModal('Backup baixado!', 'O arquivo foi salvo neste aparelho. Para garantir, envie ele agora pra você mesma por e-mail, WhatsApp ("Mensagens para você") ou salve numa nuvem (Google Drive, iCloud) — assim não depende só deste celular.');
+      infoModal('Backup baixado!', 'O arquivo foi salvo neste aparelho (geralmente na pasta Downloads). Para garantir, envie ele agora pra você mesma por e-mail, WhatsApp ("Mensagens para você") ou salve numa nuvem (Google Drive, iCloud) — assim não depende só deste celular.');
     }catch(e){
-      if(e && e.code === 'declined') return;
+      console.error('Falha ao gerar backup', e);
       confirmModal('Não foi possível baixar o backup agora. Tente novamente em instantes.', ()=>{});
     }
   }
@@ -648,6 +780,82 @@
     const scheduled = state.appointments.filter(a => a.packageId === pk.id && a.status !== 'cancelado').length;
     return Math.max(0, (pk.sessionsTotal||0) - scheduled);
   }
+
+  /* ---- Horários de trabalho (padrão semanal + exceções + agendamento público) ---- */
+  const WEEKDAYS = [
+    { key:'sun', label:'Domingo' },
+    { key:'mon', label:'Segunda' },
+    { key:'tue', label:'Terça' },
+    { key:'wed', label:'Quarta' },
+    { key:'thu', label:'Quinta' },
+    { key:'fri', label:'Sexta' },
+    { key:'sat', label:'Sábado' },
+  ];
+  const WEEKDAY_KEYS = WEEKDAYS.map(w => w.key);
+  function dowKey(dateISO){ const d = new Date(dateISO+'T00:00:00'); return WEEKDAY_KEYS[d.getDay()]; }
+  function getWeeklyHours(){
+    const doc = state.workHours.find(w => w.id === 'weekly');
+    return (doc && doc.days) || {};
+  }
+  function getExceptionFor(dateISO){ return state.workHoursExceptions.find(e => e.id === dateISO); }
+  // resolve o horário de trabalho de uma data específica: exceção (se houver) > padrão semanal
+  function resolveWorkHours(dateISO){
+    const exc = getExceptionFor(dateISO);
+    if(exc) return { enabled: !!exc.enabled, start: exc.start||'', end: exc.end||'', isException: true };
+    const weekly = getWeeklyHours();
+    const day = weekly[dowKey(dateISO)];
+    if(!day) return { enabled:false, start:'', end:'', isException:false };
+    return { enabled: !!day.enabled, start: day.start||'', end: day.end||'', isException:false };
+  }
+  function publicBookingLink(){
+    const path = window.location.pathname.replace(/[^/]*$/, '');
+    return window.location.origin + path + 'agendar.html';
+  }
+  function addMinutesToTime(time, minutes){
+    const [h,m] = String(time||'0:0').split(':').map(Number);
+    const total = (h*60 + m + Number(minutes||0) + 1440) % 1440;
+    return `${pad(Math.floor(total/60))}:${pad(total%60)}`;
+  }
+  function timeToMinutes(t){ const [h,m] = String(t||'0:0').split(':').map(Number); return (h||0)*60 + (m||0); }
+  function minutesToTime(m){ m = ((m%1440)+1440)%1440; return `${pad(Math.floor(m/60))}:${pad(m%60)}`; }
+  function startOfWeek(dateISO){ const d = new Date(dateISO+'T00:00:00'); return shiftDate(dateISO, -d.getDay()); }
+  // mantém a coleção publicSlots (só ocupação, sem dados de cliente) em sincronia com os agendamentos —
+  // é o que o link público usa pra saber quais horários já estão ocupados, sem expor nome/telefone de clientes
+  function writeAppointmentSlot(id, date, time, durationMin){
+    if(!id || !date || !time) return;
+    db.collection('publicSlots').doc(id).set({
+      date, time, endTime: addMinutesToTime(time, durationMin||60),
+    });
+  }
+  function deleteAppointmentSlot(id){
+    if(!id) return;
+    db.collection('publicSlots').doc(id).delete().catch(()=>{});
+  }
+  // normaliza telefone pra só dígitos — assim "(48) 99999-0000" e "48999990000" caem no mesmo índice
+  function normalizePhone(phone){ return String(phone||'').replace(/\D/g, ''); }
+  // mantém clientIndex/{telefone}/bookings/{id} em sincronia — é o que a própria cliente usa
+  // pra ver e desmarcar o que ela agendou, sem precisar de login (só sabendo o telefone dela)
+  function writeClientIndexEntry(phone, id, data){
+    const norm = normalizePhone(phone);
+    if(!norm || !id) return;
+    db.collection('clientIndex').doc(norm).collection('bookings').doc(id).set(data);
+  }
+  function deleteClientIndexEntry(phone, id){
+    const norm = normalizePhone(phone);
+    if(!norm || !id) return;
+    db.collection('clientIndex').doc(norm).collection('bookings').doc(id).delete().catch(()=>{});
+  }
+  function updateClientIndexStatus(phone, id, status){
+    const norm = normalizePhone(phone);
+    if(!norm || !id) return;
+    db.collection('clientIndex').doc(norm).collection('bookings').doc(id).update({ status }).catch(()=>{});
+  }
+  // move o índice de um agendamento pro novo telefone quando o telefone da cliente é corrigido
+  function moveClientIndexEntry(oldPhone, newPhone, id, data){
+    if(normalizePhone(oldPhone) === normalizePhone(newPhone)){ writeClientIndexEntry(newPhone, id, data); return; }
+    if(oldPhone) deleteClientIndexEntry(oldPhone, id);
+    writeClientIndexEntry(newPhone, id, data);
+  }
   // pendências financeiras unificadas: atendimentos concluídos + lotes por dose + pacotes de serviço, com pagamento pendente ou parcial
   function allReceivables(){
     const appts = receivables().map(a => ({
@@ -674,19 +882,78 @@
 
   /* ================= RENDER SHELL ================= */
   function renderAll(){
+    const loginScreen = document.getElementById('loginScreen');
+    const appShell = document.getElementById('appShell');
+    if(!currentUser){
+      loginScreen.hidden = false;
+      appShell.hidden = true;
+      wireLoginScreen();
+      return;
+    }
+    loginScreen.hidden = true;
+    appShell.hidden = false;
     renderNav();
+    renderSidebarFooter();
     const main = document.getElementById('main');
     let statusBanner = '';
     if(connError) statusBanner = `<div class="banner" style="background:var(--danger-tint);color:var(--danger);"><span>⚠ Não foi possível conectar ao banco de dados agora. Verifique sua internet — suas alterações não serão salvas até a conexão voltar.</span></div>`;
     else if(!dbReady) statusBanner = `<div class="banner"><span>⏳ Carregando seus dados...</span></div>`;
     if(ui.tab === 'agenda') main.innerHTML = statusBanner + agendaView();
+    else if(ui.tab === 'calendario') main.innerHTML = statusBanner + calendarView();
     else if(ui.tab === 'catalog') main.innerHTML = statusBanner + catalogView();
+    else if(ui.tab === 'horarios') main.innerHTML = statusBanner + horariosView();
     else if(ui.tab === 'pacotes') main.innerHTML = statusBanner + packagesView();
     else if(ui.tab === 'doses') main.innerHTML = statusBanner + dosesView();
     else if(ui.tab === 'financeiro') main.innerHTML = statusBanner + financeView();
     else if(ui.tab === 'manual') main.innerHTML = manualView();
     else main.innerHTML = statusBanner + backupView();
     wireMain();
+  }
+
+  function wireLoginScreen(){
+    const emailInput = document.getElementById('loginEmail');
+    const passInput = document.getElementById('loginPassword');
+    const errorBox = document.getElementById('loginError');
+    const submitBtn = document.getElementById('loginSubmit');
+    if(authError){ errorBox.hidden = false; errorBox.textContent = authError; }
+    else { errorBox.hidden = true; }
+    submitBtn.disabled = authBusy;
+    submitBtn.textContent = authBusy ? 'Entrando...' : 'Entrar';
+    const doLogin = () => {
+      const email = emailInput.value.trim();
+      const pass = passInput.value;
+      if(!email || !pass){ authError = 'Preencha e-mail e senha.'; renderAll(); return; }
+      authError = ''; authBusy = true; renderAll();
+      firebase.auth().signInWithEmailAndPassword(email, pass).catch(err => {
+        authBusy = false;
+        authError = err && err.code === 'auth/invalid-credential' || err && err.code === 'auth/wrong-password' || err && err.code === 'auth/user-not-found'
+          ? 'E-mail ou senha incorretos.'
+          : 'Não foi possível entrar agora. Tente de novo em instantes.';
+        renderAll();
+      });
+    };
+    submitBtn.onclick = doLogin;
+    [emailInput, passInput].forEach(inp => { inp.onkeydown = (e) => { if(e.key === 'Enter') doLogin(); }; });
+    document.getElementById('loginForgot').onclick = () => {
+      const email = emailInput.value.trim();
+      if(!email){ authError = 'Digite seu e-mail acima e toque em "Esqueci minha senha" de novo.'; renderAll(); return; }
+      firebase.auth().sendPasswordResetEmail(email).then(() => {
+        authError = '';
+        infoModal('E-mail enviado!', 'Se esse e-mail tiver uma conta, chegou um link pra criar uma senha nova. Confira também a caixa de spam.');
+      }).catch(() => {
+        infoModal('E-mail enviado!', 'Se esse e-mail tiver uma conta, chegou um link pra criar uma senha nova. Confira também a caixa de spam.');
+      });
+    };
+  }
+
+  function renderSidebarFooter(){
+    const el = document.getElementById('sidebarFooter');
+    if(!el) return;
+    el.innerHTML = `
+      <div class="user-email">${esc(currentUser && currentUser.email || '')}</div>
+      <button class="btn btn-ghost btn-sm" id="logoutBtn" style="width:100%;">Sair</button>
+    `;
+    document.getElementById('logoutBtn').onclick = () => firebase.auth().signOut();
   }
 
   function renderNav(){
@@ -825,7 +1092,7 @@
         const chips = (s.productsUsed||[]).map(p => `<span class="chip">${p.qty}× ${esc(p.name)}</span>`).join(' ');
         return `<div class="item-card ${s.active===false?'inactive':''}">
           <div style="flex:1;min-width:160px;">
-            <div class="appt-client">${esc(s.name)}</div>
+            <div class="appt-client">${esc(s.name)} <span style="font-weight:400;color:var(--ink-dim);font-size:12.5px;">· ${s.duration||60}min</span></div>
             <div class="appt-service">${chips || 'Sem produto vinculado'}</div>
           </div>
           <div class="appt-price tabular" style="width:auto;">${fmtMoney(s.price)}</div>
@@ -928,6 +1195,165 @@
       </div>
       ${activeBlock}
       ${finishedBlock}
+    `;
+  }
+
+  /* ================= CALENDÁRIO (visão semanal) ================= */
+  function calendarView(){
+    const weekDates = [0,1,2,3,4,5,6].map(i => shiftDate(ui.calWeekStart, i));
+    const today = todayISO();
+    const dayHours = weekDates.map(d => resolveWorkHours(d));
+    const weekAppts = state.appointments.filter(a => weekDates.includes(a.date) && a.status !== 'cancelado');
+
+    let gridStartMin = null, gridEndMin = null;
+    dayHours.forEach(h => {
+      if(h.enabled && h.start && h.end){
+        gridStartMin = gridStartMin==null ? timeToMinutes(h.start) : Math.min(gridStartMin, timeToMinutes(h.start));
+        gridEndMin = gridEndMin==null ? timeToMinutes(h.end) : Math.max(gridEndMin, timeToMinutes(h.end));
+      }
+    });
+    weekAppts.forEach(a => {
+      const s = timeToMinutes(a.time||'0:0');
+      const e = s + Number(a.duration||60);
+      gridStartMin = gridStartMin==null ? s : Math.min(gridStartMin, s);
+      gridEndMin = gridEndMin==null ? e : Math.max(gridEndMin, e);
+    });
+    if(gridStartMin==null){ gridStartMin = 8*60; gridEndMin = 20*60; }
+    gridStartMin = Math.floor(gridStartMin/60)*60;
+    gridEndMin = Math.max(gridEndMin, gridStartMin+60);
+    gridEndMin = Math.ceil(gridEndMin/60)*60;
+
+    const STEP = 30;
+    const rows = [];
+    for(let t=gridStartMin; t<gridEndMin; t+=STEP) rows.push(t);
+
+    const weekLabel = `${fmtDate(weekDates[0])} a ${fmtDate(weekDates[6])}`;
+
+    const headerCells = weekDates.map((d,i) => `
+      <div class="cal-daycol-head ${d===today?'is-today':''}">
+        <div class="dow">${WEEKDAYS[i].label.slice(0,3)}</div>
+        <div class="dnum">${d.slice(8,10)}</div>
+      </div>`).join('');
+
+    const bodyRows = rows.map(t => {
+      const timeLabel = minutesToTime(t);
+      const cells = weekDates.map((d,i) => {
+        const h = dayHours[i];
+        const inHours = h.enabled && h.start && h.end && t >= timeToMinutes(h.start) && t < timeToMinutes(h.end);
+        const dayAppts = weekAppts.filter(a => a.date === d && Math.floor(timeToMinutes(a.time||'0:0')/STEP)*STEP === t);
+        if(dayAppts.length){
+          return `<div class="cal-cell has-appt">${dayAppts.map(a => `<button type="button" class="cal-chip ${a.status==='concluido'?'is-done':''}" data-cal-edit="${a.id}" title="${esc(a.clientName)} — ${esc(a.serviceName)}">${esc(a.time)} ${esc(a.clientName)}</button>`).join('')}</div>`;
+        }
+        if(inHours){
+          return `<div class="cal-cell is-open"><button type="button" class="cal-add" data-cal-add="${d}|${minutesToTime(t)}" title="Novo agendamento às ${minutesToTime(t)}">+</button></div>`;
+        }
+        return `<div class="cal-cell is-closed"></div>`;
+      }).join('');
+      return `<div class="cal-row"><div class="cal-time">${timeLabel}</div>${cells}</div>`;
+    }).join('');
+
+    return `
+      <div class="main-header">
+        <div>
+          <h1>Calendário</h1>
+          <div class="desc">Semana de ${weekLabel} — toque num horário livre pra agendar, ou num agendamento pra editar/desmarcar</div>
+        </div>
+      </div>
+      <div class="cal-toolbar">
+        <button class="btn btn-ghost btn-sm" id="calPrevWeek">${ICONS.chevL} Semana anterior</button>
+        <button class="btn btn-ghost btn-sm" id="calTodayWeek">Esta semana</button>
+        <button class="btn btn-ghost btn-sm" id="calNextWeek">Próxima semana ${ICONS.chevR}</button>
+      </div>
+      <div class="cal-grid-wrap">
+        <div class="cal-grid">
+          <div class="cal-row cal-head-row"><div class="cal-time"></div>${headerCells}</div>
+          ${bodyRows}
+        </div>
+      </div>
+    `;
+  }
+
+  /* ================= HORÁRIOS DE TRABALHO ================= */
+  function horariosView(){
+    const weekly = getWeeklyHours();
+    const today = todayISO();
+    const todayResolved = resolveWorkHours(today);
+    const todayLabel = todayResolved.enabled
+      ? `Hoje (${fmtDate(today)}) está <b>aberto</b> das <b>${todayResolved.start}</b> às <b>${todayResolved.end}</b>${todayResolved.isException ? ' (exceção configurada pra hoje)' : ''}.`
+      : `Hoje (${fmtDate(today)}) está <b>fechado</b> pro agendamento público${todayResolved.isException ? ' (exceção configurada pra hoje)' : ' — nenhum horário padrão definido pra esse dia da semana'}.`;
+
+    const weeklyRows = WEEKDAYS.map(w => {
+      const day = weekly[w.key] || { enabled:false, start:'13:00', end:'19:00' };
+      return `
+        <div class="item-card" style="flex-wrap:wrap;">
+          <div class="checkfield" style="margin:0;min-width:150px;">
+            <input type="checkbox" id="wh_${w.key}_on" ${day.enabled ? 'checked' : ''}>
+            <label for="wh_${w.key}_on">${w.label}</label>
+          </div>
+          <div class="field-row" style="flex:1;margin:0;min-width:200px;">
+            <div class="field" style="margin:0;"><input type="time" id="wh_${w.key}_start" value="${day.start||'13:00'}"></div>
+            <div class="field" style="margin:0;"><input type="time" id="wh_${w.key}_end" value="${day.end||'19:00'}"></div>
+          </div>
+        </div>`;
+    }).join('');
+
+    const exceptions = state.workHoursExceptions.slice().filter(e => e.id >= today).sort((a,b) => a.id.localeCompare(b.id));
+    const exceptionsHTML = exceptions.length ? exceptions.map(e => `
+      <div class="item-card">
+        <div style="flex:1;">
+          <div class="appt-client">${fmtDateLong(e.id)}</div>
+          <div class="appt-service">${e.enabled ? `Aberto das ${e.start} às ${e.end}` : 'Fechado (folga)'}</div>
+        </div>
+        <div class="appt-actions">
+          <button class="icon-btn" title="Remover exceção" data-delete-exception="${e.id}">${ICONS.trash}</button>
+        </div>
+      </div>`).join('') : `<div class="empty" style="padding:18px;"><div>Nenhuma exceção cadastrada — os dias seguem o horário padrão acima.</div></div>`;
+
+    const link = publicBookingLink();
+
+    return `
+      <div class="main-header">
+        <div>
+          <h1>Horários</h1>
+          <div class="desc">Defina quando a Duda atende — isso controla o que aparece disponível no link público de agendamento</div>
+        </div>
+      </div>
+
+      <div class="card" style="padding:18px 20px;margin-bottom:18px;">
+        <p style="margin:0 0 10px;font-size:14px;">${todayLabel}</p>
+        <div class="field" style="margin-bottom:8px;"><label>Link de agendamento pra enviar às clientes</label>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <input type="text" id="publicLinkInput" readonly value="${link}" style="flex:1;min-width:200px;">
+            <button class="btn btn-ghost" id="copyLinkBtn">Copiar link</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" style="padding:18px 20px;margin-bottom:18px;">
+        <h3 style="margin:0 0 4px;">Horário padrão da semana</h3>
+        <p style="font-size:13px;color:var(--ink-dim);margin:0 0 14px;">Marque os dias que a Duda atende e o horário de cada um. Fica valendo toda semana, até você mudar de novo.</p>
+        <div class="row-list">${weeklyRows}</div>
+        <div class="modal-actions" style="margin-top:14px;">
+          <button class="btn btn-primary" id="saveWeeklyBtn">Salvar horário padrão</button>
+        </div>
+      </div>
+
+      <div class="card" style="padding:18px 20px;">
+        <h3 style="margin:0 0 4px;">Exceções (um dia específico diferente do padrão)</h3>
+        <p style="font-size:13px;color:var(--ink-dim);margin:0 0 14px;">Use pra uma folga pontual ou um horário estendido/reduzido só naquele dia — sem mexer no padrão da semana.</p>
+        <div class="field-row">
+          <div class="field"><label for="excDate">Data</label><input type="date" id="excDate" min="${today}" value="${today}"></div>
+          <div class="checkfield" style="align-self:flex-end;margin-bottom:14px;"><input type="checkbox" id="excFolga" checked><label for="excFolga">Folga (fechado o dia todo)</label></div>
+        </div>
+        <div class="field-row" id="excHoursRow" style="display:none;">
+          <div class="field"><label for="excStart">Início</label><input type="time" id="excStart" value="13:00"></div>
+          <div class="field"><label for="excEnd">Fim</label><input type="time" id="excEnd" value="19:00"></div>
+        </div>
+        <div class="modal-actions" style="justify-content:flex-start;margin-bottom:18px;">
+          <button class="btn btn-primary" id="saveExceptionBtn">Salvar exceção</button>
+        </div>
+        <div class="row-list">${exceptionsHTML}</div>
+      </div>
     `;
   }
 
@@ -1113,7 +1539,6 @@
     const last = store.meta && store.meta.lastBackupAt;
     const lastLabel = last ? new Date(last).toLocaleString('pt-BR', {day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}) : 'nunca';
     const overdue = needsBackup();
-    const saveDisabled = downloadsState !== 'ready';
 
     return `
       <div class="main-header">
@@ -1124,16 +1549,14 @@
       </div>
       <div class="callout warn">
         <span class="ico">📦</span>
-        <span>Como o app não usa login, os dados ficam salvos só neste navegador. Baixar um backup de vez em quando é a forma de não perder tudo se limpar os dados do navegador, trocar de aparelho, ou algo der errado.</span>
+        <span>Os dados ficam salvos na nuvem (Firestore), mas nunca custa ter uma cópia extra. Baixar um backup de vez em quando é a forma de não perder tudo se algo der muito errado.</span>
       </div>
       <div class="card" style="padding:20px 22px;">
         <h3 style="margin:0 0 4px;">Baixar backup</h3>
         <p style="font-size:13.5px;color:var(--ink-dim);margin:0 0 4px;">Último backup: <b class="tabular">${lastLabel}</b>${overdue ? ' <span class="badge badge-low">Recomendado</span>' : ''}</p>
         <p style="font-size:13px;color:var(--ink-faint);margin:0 0 16px;">Salva um arquivo com todos os serviços, produtos, agendamentos e lançamentos financeiros. Guarde esse arquivo em algum lugar seguro (e-mail, nuvem, etc.).</p>
-        <button class="btn btn-primary" id="exportBackupBtn" ${saveDisabled?'disabled':''}>${ICONS.download} Baixar backup agora</button>
+        <button class="btn btn-primary" id="exportBackupBtn">${ICONS.download} Baixar backup agora</button>
         <p style="font-size:12px;color:var(--ink-faint);margin:12px 0 0;">Depois de baixar, envie o arquivo pra você mesma por e-mail, WhatsApp ("Mensagens para você") ou salve numa nuvem (Google Drive, iCloud) — assim fica seguro mesmo se perder o aparelho.</p>
-        ${downloadsState==='pending' ? '<div style="font-size:12px;color:var(--ink-faint);margin-top:10px;">Preparando função de backup…</div>' : ''}
-        ${downloadsState==='unavailable' ? '<div style="font-size:12px;color:var(--ink-faint);margin-top:10px;">Função de backup indisponível neste momento. Tente novamente mais tarde.</div>' : ''}
       </div>
       <div class="card" style="padding:20px 22px;">
         <h3 style="margin:0 0 8px;">Restaurar a partir de um backup</h3>
@@ -1157,6 +1580,7 @@
         ${body}
       </div>`;
     const p = (html) => `<p style="font-size:13.5px;color:var(--ink-dim);line-height:1.55;margin:0 0 10px;">${html}</p>`;
+    const steps = (items) => `<ol style="margin:0 0 10px;padding-left:18px;">${items.map(i=>`<li style="font-size:13.5px;color:var(--ink-dim);line-height:1.55;margin-bottom:6px;">${i}</li>`).join('')}</ol>`;
 
     return `
       <div class="main-header">
@@ -1169,7 +1593,7 @@
       <div class="card" style="padding:20px 22px;margin-bottom:16px;background:var(--surface-muted, var(--surface));">
         <h3 style="margin:0 0 10px;">Bem-vinda à nova versão! 🎉</h3>
         ${p('Este app é o mesmo de sempre, só que agora mais rápido e mais seguro. Os dados ficam salvos automaticamente na internet (não só no seu celular), então você pode abrir de qualquer aparelho — celular, computador, tablet — e vai ver sempre as mesmas informações atualizadas na hora.')}
-        ${p('Não precisa de login nem senha: é só abrir o link de sempre e usar normalmente.')}
+        ${p('Agora esse painel (o que você usa pra gerenciar tudo) pede login com e-mail e senha, pra proteger os dados das clientes. Já as clientes marcam sozinhas por um link separado, sem precisar de login — ver "Horários e link de agendamento" abaixo.')}
       </div>
 
       ${sec('📅 Agenda', `
@@ -1181,10 +1605,24 @@
       `)}
 
       ${sec('📦 Pacotes', `
-        ${p('Use essa aba quando a cliente comprar várias sessões do mesmo serviço de uma vez, como um pacote de 4 massagens.')}
-        ${p('Ao criar o pacote, escolha o serviço e quantas sessões — você já pode marcar as datas de todas de uma vez (tem um botão "Preencher automaticamente" que marca 1 por semana), ou deixar em branco e agendar aos poucos depois, pelo botão "Agendar sessão".')}
-        ${p('As sessões agendadas aparecem normalmente na Agenda, com um selo "📦 Pacote". Ao concluir uma dessas sessões, o app não cobra de novo — já está coberta pelo pacote.')}
-        ${p('Se quiser controlar o pagamento do pacote também, informe o valor combinado ao cadastrar — funciona igual ao pagamento de atendimento (pago, parcial ou pendente).')}
+        ${p('Use essa aba quando a cliente comprar várias sessões do mesmo serviço de uma vez, como um pacote de 4 massagens — fica tudo organizado numa aba própria, com agendamento, pagamento e estoque juntos.')}
+        ${p('<b>1. Criar um pacote:</b>')}
+        ${steps([
+          'Toque em "Pacotes", no menu lateral',
+          'Toque em "+ Novo pacote"',
+          'Escolha a cliente, o serviço e quantas sessões o pacote tem',
+          'Informe o valor total combinado do pacote',
+        ])}
+        ${p('<b>2. Agendar as sessões:</b>')}
+        ${steps([
+          'Você pode já marcar a data de todas as sessões na hora da compra',
+          'Ou deixar algumas em aberto e marcar depois, conforme a cliente combinar',
+          'Toque em "Preencher automaticamente (1 por semana)" pra preencher as datas sozinho',
+        ])}
+        ${p('Sessão sem data fica pendente — é só tocar em "Agendar sessão" no card do pacote quando a cliente definir o dia. As sessões agendadas aparecem normalmente na Agenda, com um selo "📦 Pacote".')}
+        ${p('<b>3. Pagamento:</b> ao cadastrar o pacote, informe o valor combinado e marque se ela pagou tudo, uma parte, ou vai pagar depois — igual ao pagamento de atendimento. Se ficar devendo, aparece sozinho no Financeiro, em "A receber".')}
+        ${p('<b>4. Ao realizar uma sessão:</b> conclua na Agenda, do jeitinho de sempre. O app não pergunta pagamento de novo — já está incluso no pacote. Se o serviço usa produto, o estoque desconta normal.')}
+        ${p('<b>5. Precisar apagar um pacote:</b> ao excluir, as sessões agendadas dele e os lançamentos no Financeiro somem juntos, sem deixar nada solto.')}
       `)}
 
       ${sec('🧴 Serviços e Produtos', `
@@ -1205,6 +1643,26 @@
         ${p('<b>Editar ou excluir:</b> lançamentos manuais têm os ícones de editar e excluir na linha deles. Lançamentos automáticos (que vieram de um atendimento) só podem ser corrigidos direto na Agenda.')}
         ${p('<b>A receber:</b> lista tudo que está pendente ou parcial (atendimentos e doses juntos), com botão pra registrar quando a cliente pagar. Se uma cliente tiver mais de uma pendência, aparece também um resumo com o total consolidado dela.')}
         ${p('No topo da aba tem um resumo comparando receitas, despesas e saldo do mês atual com o mês anterior, com uma setinha mostrando se subiu (▲) ou desceu (▼).')}
+      `)}
+
+      ${sec('📆 Calendário', `
+        ${p('Visão da semana inteira de uma vez (ao contrário da Agenda, que mostra um dia por vez): cada coluna é um dia, cada linha um horário.')}
+        ${p('Toque num quadradinho livre (dentro do seu horário de trabalho) pra criar um agendamento novo já com aquele dia e hora preenchidos. Toque num agendamento existente pra editar, corrigir ou desmarcar.')}
+        ${p('Use as setas no topo pra navegar entre semanas, e "Esta semana" pra voltar pra hoje.')}
+      `)}
+
+      ${sec('🕐 Horários e link de agendamento', `
+        ${p('Em <b>Horários</b>, defina o horário padrão que você atende em cada dia da semana (ex: segunda a sexta, 13h às 19h) — é isso que controla o que aparece disponível pras clientes marcarem sozinhas.')}
+        ${p('Pra um dia específico diferente do padrão (uma folga, um horário estendido), use a seção "Exceções" — sem precisar mexer no padrão da semana toda.')}
+        ${p('Na mesma aba tem o <b>link de agendamento</b> pra mandar pras clientes (WhatsApp, Instagram, etc). Elas escolhem o serviço, veem só os horários realmente livres, preenchem nome e telefone e já ficam agendadas na hora — sem precisar de login. O horário some da lista de disponíveis assim que alguém marca, pra não dar agendamento duplicado.')}
+        ${p('Sessões marcadas pelo link público aparecem na Agenda e no Calendário normalmente, junto com as que você mesma cadastra.')}
+        ${p('<b>A cliente também pode desmarcar sozinha:</b> na mesma página do link, tem "Já agendei — ver ou cancelar meus horários" — ela digita o telefone que usou e vê os agendamentos dela, com opção de desmarcar. Não precisa te chamar pra isso.')}
+      `)}
+
+      ${sec('🔐 Login', `
+        ${p('Esse painel administrativo (o que você usa no dia a dia) agora pede e-mail e senha pra entrar — assim ninguém mais consegue ver os dados das clientes, só quem tem a senha.')}
+        ${p('Esqueceu a senha? Na tela de login, toque em "Esqueci minha senha" e informe o e-mail cadastrado — chega um link por e-mail pra criar uma senha nova.')}
+        ${p('O link de agendamento pras clientes (aba Horários) é separado e não pede login — só quem entra nesse painel administrativo precisa da senha.')}
       `)}
 
       ${sec('🗄️ Backup', `
@@ -1232,7 +1690,12 @@
       document.querySelectorAll('[data-edit-appt]').forEach(b => b.onclick = () => openAppointmentModal(state.appointments.find(a=>a.id===b.dataset.editAppt)));
       document.querySelectorAll('[data-cancel-appt]').forEach(b => b.onclick = () => cancelAppointment(b.dataset.cancelAppt));
       document.querySelectorAll('[data-complete-appt]').forEach(b => b.onclick = () => completeAppointment(b.dataset.completeAppt));
-      document.querySelectorAll('[data-delete-appt]').forEach(b => b.onclick = () => confirmModal('Excluir este agendamento cancelado?', () => db.collection('appointments').doc(b.dataset.deleteAppt).delete()));
+      document.querySelectorAll('[data-delete-appt]').forEach(b => b.onclick = () => confirmModal('Excluir este agendamento cancelado?', () => {
+        const a = state.appointments.find(x=>x.id===b.dataset.deleteAppt);
+        db.collection('appointments').doc(b.dataset.deleteAppt).delete();
+        deleteAppointmentSlot(b.dataset.deleteAppt);
+        if(a) deleteClientIndexEntry(a.clientPhone, a.id);
+      }));
       document.querySelectorAll('[data-register-payment]').forEach(b => b.onclick = () => openRegisterPaymentModal(state.appointments.find(a=>a.id===b.dataset.registerPayment)));
       document.querySelectorAll('[data-edit-client-data]').forEach(b => b.onclick = () => openEditClientDataModal(state.appointments.find(a=>a.id===b.dataset.editClientData)));
       document.querySelectorAll('[data-goto]').forEach(b => b.onclick = () => {
@@ -1242,6 +1705,16 @@
         renderAll();
       });
       document.querySelectorAll('[data-jump-date]').forEach(b => b.onclick = () => { ui.date = b.dataset.jumpDate; renderAll(); });
+    }
+    else if(ui.tab === 'calendario'){
+      document.getElementById('calPrevWeek').onclick = () => { ui.calWeekStart = shiftDate(ui.calWeekStart, -7); renderAll(); };
+      document.getElementById('calNextWeek').onclick = () => { ui.calWeekStart = shiftDate(ui.calWeekStart, 7); renderAll(); };
+      document.getElementById('calTodayWeek').onclick = () => { ui.calWeekStart = startOfWeek(todayISO()); renderAll(); };
+      document.querySelectorAll('[data-cal-edit]').forEach(b => b.onclick = () => openAppointmentModal(state.appointments.find(a=>a.id===b.dataset.calEdit)));
+      document.querySelectorAll('[data-cal-add]').forEach(b => b.onclick = () => {
+        const [date, time] = b.dataset.calAdd.split('|');
+        openAppointmentModal(null, { date, time });
+      });
     }
     else if(ui.tab === 'catalog'){
       document.querySelectorAll('[data-sub]').forEach(b => b.onclick = () => { ui.sub = b.dataset.sub; renderAll(); });
@@ -1254,6 +1727,53 @@
       document.querySelectorAll('[data-edit-product]').forEach(b => b.onclick = () => openProductModal(state.products.find(p=>p.id===b.dataset.editProduct)));
       document.querySelectorAll('[data-delete-product]').forEach(b => b.onclick = () => confirmModal('Excluir este produto?', () => db.collection('products').doc(b.dataset.deleteProduct).delete()));
       document.querySelectorAll('[data-toggle-product]').forEach(b => b.onclick = () => { const p=state.products.find(x=>x.id===b.dataset.toggleProduct); db.collection('products').doc(p.id).update({active: p.active===false}); });
+    }
+    else if(ui.tab === 'horarios'){
+      WEEKDAY_KEYS.forEach(k => {
+        const chk = document.getElementById('wh_'+k+'_on');
+        const startI = document.getElementById('wh_'+k+'_start');
+        const endI = document.getElementById('wh_'+k+'_end');
+        const sync = () => { startI.disabled = endI.disabled = !chk.checked; };
+        chk.onchange = sync; sync();
+      });
+      document.getElementById('saveWeeklyBtn').onclick = () => {
+        const days = {};
+        WEEKDAY_KEYS.forEach(k => {
+          days[k] = {
+            enabled: document.getElementById('wh_'+k+'_on').checked,
+            start: document.getElementById('wh_'+k+'_start').value || '13:00',
+            end: document.getElementById('wh_'+k+'_end').value || '19:00',
+          };
+        });
+        db.collection('workHours').doc('weekly').set({ days, updatedAt: Date.now() }, { merge:true }).then(() => {
+          infoModal('Horário padrão salvo!', 'A partir de agora é esse o horário que aparece disponível no link público (exceto nos dias com exceção cadastrada).');
+        });
+      };
+      const excFolga = document.getElementById('excFolga');
+      const excHoursRow = document.getElementById('excHoursRow');
+      const syncExc = () => { excHoursRow.style.display = excFolga.checked ? 'none' : 'flex'; };
+      excFolga.onchange = syncExc; syncExc();
+      document.getElementById('saveExceptionBtn').onclick = () => {
+        const date = document.getElementById('excDate').value;
+        if(!date) return;
+        const folga = excFolga.checked;
+        const data = folga
+          ? { enabled:false, updatedAt: Date.now() }
+          : { enabled:true, start: document.getElementById('excStart').value || '13:00', end: document.getElementById('excEnd').value || '19:00', updatedAt: Date.now() };
+        db.collection('workHoursExceptions').doc(date).set(data).then(() => {
+          infoModal('Exceção salva!', `O dia ${fmtDate(date)} agora fica ${folga ? 'fechado' : 'com horário próprio'}, só pra essa data.`);
+        });
+      };
+      document.querySelectorAll('[data-delete-exception]').forEach(b => b.onclick = () => confirmModal('Remover essa exceção? O dia volta a seguir o horário padrão da semana.', () => db.collection('workHoursExceptions').doc(b.dataset.deleteException).delete()));
+      const copyBtn = document.getElementById('copyLinkBtn');
+      if(copyBtn) copyBtn.onclick = () => {
+        const input = document.getElementById('publicLinkInput');
+        input.select();
+        navigator.clipboard?.writeText(input.value).then(() => {
+          copyBtn.textContent = 'Copiado!';
+          setTimeout(() => { copyBtn.textContent = 'Copiar link'; }, 1800);
+        }).catch(() => {});
+      };
     }
     else if(ui.tab === 'pacotes'){
       document.getElementById('newPackageBtn').onclick = () => openPackageModal();
@@ -1372,7 +1892,10 @@
     openModal(`
       <h2>${isEdit?'Editar serviço':'Novo serviço'}</h2>
       <div class="field"><label for="svcName">Nome do serviço</label><input type="text" id="svcName" value="${esc(existing?.name||'')}" placeholder="Ex: Massagem Relaxante 60min"></div>
-      <div class="field"><label for="svcPrice">Preço</label><input type="number" id="svcPrice" min="0" step="0.01" value="${existing?.price ?? ''}" placeholder="0,00"></div>
+      <div class="field-row">
+        <div class="field"><label for="svcPrice">Preço</label><input type="number" id="svcPrice" min="0" step="0.01" value="${existing?.price ?? ''}" placeholder="0,00"></div>
+        <div class="field"><label for="svcDuration">Duração (minutos)</label><input type="number" id="svcDuration" min="5" step="5" value="${existing?.duration ?? 60}" placeholder="60"></div>
+      </div>
       <div class="field">
         <label>Produtos utilizados neste serviço (opcional)</label>
         <div id="svcProductRows"></div>
@@ -1389,9 +1912,10 @@
     document.getElementById('svcSave').onclick = () => {
       const name = document.getElementById('svcName').value.trim();
       const price = Number(document.getElementById('svcPrice').value);
-      if(!name || !(price>=0)){ return; }
+      const duration = Number(document.getElementById('svcDuration').value) || 60;
+      if(!name || !(price>=0) || !(duration>0)){ return; }
       const data = {
-        name, price,
+        name, price, duration,
         productsUsed: readProductRows('svcProductRows'),
         active: document.getElementById('svcActive').checked,
       };
@@ -1824,6 +2348,9 @@
             clientName, clientPhone, serviceId, serviceName: svc.name, servicePrice: svc.price,
             serviceProductsUsed: svc.productsUsed || [], date: sd.date, time: sd.time, extraProducts: [], notes: '',
             status:'agendado', packageId: ref.id, createdAt: Date.now(),
+          }).then(apptRef => {
+            writeAppointmentSlot(apptRef.id, sd.date, sd.time, svc.duration||60);
+            writeClientIndexEntry(clientPhone, apptRef.id, { serviceName: svc.name, date: sd.date, time: sd.time, price: svc.price, status:'agendado', createdAt: Date.now() });
           });
         });
         if(amountPaid > 0){
@@ -1864,6 +2391,10 @@
           serviceName: svc ? svc.name : pk.serviceName, servicePrice: svc ? svc.price : pk.servicePrice,
           serviceProductsUsed: svc ? (svc.productsUsed||[]) : [], date, time, extraProducts:[], notes:'',
           status:'agendado', packageId: pk.id, createdAt: Date.now(),
+        }).then(ref => {
+          const svcName = svc ? svc.name : pk.serviceName, svcPrice = svc ? svc.price : pk.servicePrice;
+          writeAppointmentSlot(ref.id, date, time, (svc && svc.duration) || 60);
+          writeClientIndexEntry(pk.clientPhone, ref.id, { serviceName: svcName, date, time, price: svcPrice, status:'agendado', createdAt: Date.now() });
         });
         closeModal();
       };
@@ -1915,14 +2446,19 @@
       ]);
       const deletes = [];
       finSnap.forEach(doc => deletes.push(db.collection('financeiro').doc(doc.id).delete()));
-      apptSnap.forEach(doc => deletes.push(db.collection('appointments').doc(doc.id).delete()));
+      apptSnap.forEach(doc => {
+        deletes.push(db.collection('appointments').doc(doc.id).delete());
+        deletes.push(db.collection('publicSlots').doc(doc.id).delete().catch(()=>{}));
+        const phone = doc.data().clientPhone;
+        if(phone) deletes.push(db.collection('clientIndex').doc(normalizePhone(phone)).collection('bookings').doc(doc.id).delete().catch(()=>{}));
+      });
       await Promise.all(deletes);
     }catch(e){ console.error('Falha ao limpar dados do pacote', e); }
     db.collection('packages').doc(id).delete();
   }
 
   /* ---- Appointment modal ---- */
-  function openAppointmentModal(existing){
+  function openAppointmentModal(existing, prefill){
     if(notReadyGuard()) return;
     const isEdit = !!existing;
     const svcList = activeServices();
@@ -1940,8 +2476,8 @@
       <div class="field"><label for="apPhone">Telefone (opcional)</label><input type="tel" id="apPhone" value="${esc(existing?.clientPhone||'')}" placeholder="(00) 00000-0000"></div>
       <div class="field"><label for="apService">Serviço</label><select id="apService"><option value="">Selecione um serviço</option>${svcOptions}</select></div>
       <div class="field-row">
-        <div class="field"><label for="apDate">Data</label><input type="date" id="apDate" value="${existing?.date || ui.date}"></div>
-        <div class="field"><label for="apTime">Horário</label><input type="time" id="apTime" value="${existing?.time || ''}"></div>
+        <div class="field"><label for="apDate">Data</label><input type="date" id="apDate" value="${existing?.date || (prefill && prefill.date) || ui.date}"></div>
+        <div class="field"><label for="apTime">Horário</label><input type="time" id="apTime" value="${existing?.time || (prefill && prefill.time) || ''}"></div>
       </div>
       <div class="field">
         <label>Produtos extras vendidos (opcional)</label>
@@ -1980,14 +2516,25 @@
         serviceName: svc ? svc.name : (isStaleService ? existing.serviceName : ''),
         servicePrice: svc ? svc.price : (isStaleService ? existing.servicePrice : 0),
         serviceProductsUsed: svc ? (svc.productsUsed || []) : (isStaleService ? (existing.serviceProductsUsed || []) : []),
+        duration: svc ? (svc.duration||60) : (isStaleService ? (existing.duration||60) : 60),
         date, time,
         extraProducts,
         notes: document.getElementById('apNotes').value.trim(),
       };
       const conflict = state.appointments.some(a => a.status === 'agendado' && a.date === date && a.time === time && a.id !== (existing && existing.id));
       const save = () => {
-        if(isEdit) db.collection('appointments').doc(existing.id).update(data);
-        else db.collection('appointments').add(Object.assign({ status:'agendado', createdAt: Date.now() }, data));
+        const idxEntry = { serviceName: data.serviceName, date, time, price: data.servicePrice, status:'agendado', createdAt: Date.now() };
+        if(isEdit){
+          db.collection('appointments').doc(existing.id).update(data);
+          writeAppointmentSlot(existing.id, date, time, data.duration);
+          moveClientIndexEntry(existing.clientPhone, data.clientPhone, existing.id, idxEntry);
+        } else {
+          db.collection('appointments').add(Object.assign({ status:'agendado', createdAt: Date.now() }, data))
+            .then(ref => {
+              writeAppointmentSlot(ref.id, date, time, data.duration);
+              writeClientIndexEntry(data.clientPhone, ref.id, idxEntry);
+            });
+        }
         closeModal();
       };
       if(conflict){
@@ -2015,11 +2562,13 @@
     document.getElementById('ecSave').onclick = () => {
       const clientName = document.getElementById('ecName').value.trim();
       if(!clientName) return;
+      const newPhone = document.getElementById('ecPhone').value.trim();
       db.collection('appointments').doc(a.id).update({
         clientName,
-        clientPhone: document.getElementById('ecPhone').value.trim(),
+        clientPhone: newPhone,
         notes: document.getElementById('ecNotes').value.trim(),
       });
+      moveClientIndexEntry(a.clientPhone, newPhone, a.id, { serviceName: a.serviceName, date: a.date, time: a.time, price: a.servicePrice, status: a.status, createdAt: a.createdAt || Date.now() });
       closeModal();
     };
   }
@@ -2096,6 +2645,7 @@
     db.collection('appointments').doc(a.id).update({
       status:'concluido', completedAt: Date.now(), totalAmount: computeApptTotal(a),
     });
+    updateClientIndexStatus(a.clientPhone, a.id, 'concluido');
     const pk = packageById(a.packageId);
     if(pk){
       db.collection('packages').doc(pk.id).update({ sessionsUsed: Math.min(pk.sessionsTotal||0, (pk.sessionsUsed||0) + 1) });
@@ -2171,6 +2721,7 @@
         status:'concluido', completedAt: Date.now(), totalAmount: total,
         paymentStatus, amountPaid, payments, dueDate,
       });
+      updateClientIndexStatus(a.clientPhone, a.id, 'concluido');
       closeModal();
     };
   }
@@ -2223,7 +2774,11 @@
   function cancelAppointment(id){
     const a = state.appointments.find(x => x.id === id);
     if(!a || a.status !== 'agendado') return;
-    confirmModal(`Cancelar o agendamento de ${a.clientName}?`, () => db.collection('appointments').doc(id).update({ status:'cancelado' }));
+    confirmModal(`Cancelar o agendamento de ${a.clientName}?`, () => {
+      db.collection('appointments').doc(id).update({ status:'cancelado' });
+      deleteAppointmentSlot(id);
+      updateClientIndexStatus(a.clientPhone, id, 'cancelado');
+    });
   }
 
   async function clearExamples(){
