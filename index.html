@@ -6,48 +6,48 @@
 <title>Duda Mazon Estética</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,450..700&family=Work+Sans:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700&family=Montserrat:wght@400;500;600;700&display=swap">
 <style>
   :root{
-    --bg:#F3EEF0;
+    --bg:#F7F4EE;
     --surface:#FFFFFF;
-    --surface-muted:#FBF6F8;
-    --line:#E6DEE2;
-    --ink:#2A2229;
-    --ink-dim:#6E6169;
-    --ink-faint:#9C8F96;
-    --primary:#4B3550;
-    --primary-ink:#FFFFFF;
-    --primary-tint:#EDE4EF;
-    --accent:#BE8A3D;
-    --accent-tint:#F6EAD3;
-    --success:#3D7A54;
-    --success-tint:#E1EFE4;
+    --surface-muted:#F3EEE4;
+    --line:#E7D9C9;
+    --ink:#333333;
+    --ink-dim:#6B6B66;
+    --ink-faint:#9A968D;
+    --primary:#A8B7A0;
+    --primary-ink:#333333;
+    --primary-tint:#E7ECE4;
+    --accent:#B89B5E;
+    --accent-tint:#F3EAD8;
+    --success:#4A7A45;
+    --success-tint:#E3EEDF;
     --danger:#B14432;
     --danger-tint:#F6E2DE;
     --warning:#C1691F;
     --warning-tint:#F8E6D4;
-    --shadow: 0 1px 2px rgba(42,34,41,0.06), 0 8px 24px -12px rgba(42,34,41,0.18);
+    --shadow: 0 1px 2px rgba(51,51,51,0.06), 0 8px 24px -12px rgba(51,51,51,0.18);
     --radius: 14px;
     --radius-sm: 9px;
     color-scheme: light;
   }
   @media (prefers-color-scheme: dark){
     :root:not([data-theme="light"]){
-      --bg:#1D1720;
-      --surface:#272029;
-      --surface-muted:#231D26;
-      --line:#3B3340;
-      --ink:#F1EBEE;
-      --ink-dim:#B9AEB6;
-      --ink-faint:#8A7E86;
-      --primary:#C9A8DA;
-      --primary-ink:#241A2B;
-      --primary-tint:#372B42;
-      --accent:#D8A85A;
-      --accent-tint:#3B3122;
-      --success:#6FBB8B;
-      --success-tint:#20342A;
+      --bg:#242320;
+      --surface:#2D2C28;
+      --surface-muted:#282722;
+      --line:#3D3B34;
+      --ink:#F7F4EE;
+      --ink-dim:#C9C4B6;
+      --ink-faint:#9B968A;
+      --primary:#B7C6AF;
+      --primary-ink:#232922;
+      --primary-tint:#333B2F;
+      --accent:#D4B876;
+      --accent-tint:#3B3120;
+      --success:#7FB579;
+      --success-tint:#25301F;
       --danger:#E58A78;
       --danger-tint:#3A241F;
       --warning:#E0954A;
@@ -56,20 +56,20 @@
     }
   }
   :root[data-theme="dark"]{
-    --bg:#1D1720;
-    --surface:#272029;
-    --surface-muted:#231D26;
-    --line:#3B3340;
-    --ink:#F1EBEE;
-    --ink-dim:#B9AEB6;
-    --ink-faint:#8A7E86;
-    --primary:#C9A8DA;
-    --primary-ink:#241A2B;
-    --primary-tint:#372B42;
-    --accent:#D8A85A;
-    --accent-tint:#3B3122;
-    --success:#6FBB8B;
-    --success-tint:#20342A;
+    --bg:#242320;
+    --surface:#2D2C28;
+    --surface-muted:#282722;
+    --line:#3D3B34;
+    --ink:#F7F4EE;
+    --ink-dim:#C9C4B6;
+    --ink-faint:#9B968A;
+    --primary:#B7C6AF;
+    --primary-ink:#232922;
+    --primary-tint:#333B2F;
+    --accent:#D4B876;
+    --accent-tint:#3B3120;
+    --success:#7FB579;
+    --success-tint:#25301F;
     --danger:#E58A78;
     --danger-tint:#3A241F;
     --warning:#E0954A;
@@ -81,12 +81,12 @@
   body{
     background:var(--bg);
     color:var(--ink);
-    font-family:"Work Sans", -apple-system, "Segoe UI", sans-serif;
+    font-family:"Montserrat", -apple-system, "Segoe UI", sans-serif;
     font-size:15px;
     line-height:1.5;
   }
   h1,h2,h3,.display{
-    font-family:"Fraunces", Georgia, serif;
+    font-family:"Cinzel", Georgia, serif;
     font-weight:600;
     letter-spacing:-0.01em;
     text-wrap:balance;
@@ -116,7 +116,7 @@
     padding:32px 28px;
   }
   .login-brand{ text-align:center; margin-bottom:22px; }
-  .login-brand .name{ font-family:"Fraunces",serif; font-weight:600; font-size:24px; color:var(--ink); }
+  .login-brand .name{ font-family:"Cinzel",serif; font-weight:600; font-size:24px; color:var(--ink); }
   .login-brand .sub{ font-size:13px; color:var(--ink-faint); margin-top:2px; }
   .login-error{
     background:var(--danger-tint); color:var(--danger);
@@ -159,7 +159,7 @@
     overflow:hidden;
   }
   .brand-mark img{ width:100%; height:100%; object-fit:cover; display:block; }
-  .brand-text .name{ font-family:"Fraunces",serif; font-weight:600; font-size:17px; line-height:1.1; }
+  .brand-text .name{ font-family:"Cinzel",serif; font-weight:600; font-size:17px; line-height:1.1; }
   .brand-text .sub{ font-size:11.5px; color:var(--ink-faint); }
 
   .nav{ display:flex; flex-direction:column; gap:4px; }
@@ -230,7 +230,7 @@
   .cal-daycol-head{ padding:10px 6px; text-align:center; border-left:1px solid var(--line); }
   .cal-daycol-head.is-today{ background:var(--primary-tint); }
   .cal-daycol-head .dow{ font-size:11px; color:var(--ink-faint); text-transform:uppercase; letter-spacing:0.03em; }
-  .cal-daycol-head .dnum{ font-family:"Fraunces",serif; font-weight:600; font-size:16px; }
+  .cal-daycol-head .dnum{ font-family:"Cinzel",serif; font-weight:600; font-size:16px; }
   .cal-time{ font-size:11px; color:var(--ink-faint); padding:6px 6px; text-align:right; position:sticky; left:0; background:var(--surface); border-right:1px solid var(--line); white-space:nowrap; }
   .cal-cell{ border-left:1px solid var(--line); border-top:1px solid var(--line); min-height:34px; padding:2px; display:flex; flex-direction:column; gap:2px; justify-content:center; }
   .cal-cell.is-closed{ background:repeating-linear-gradient(135deg, var(--surface-muted), var(--surface-muted) 6px, var(--line) 6px, var(--line) 7px); opacity:0.5; }
@@ -277,7 +277,7 @@
     border:1px solid var(--line); background:var(--surface); border-radius:9px; padding:8px 10px;
   }
   .appt-row{ display:flex; align-items:center; gap:14px; }
-  .appt-time{ font-family:"Fraunces",serif; font-size:18px; font-weight:600; width:64px; flex:none; }
+  .appt-time{ font-family:"Cinzel",serif; font-size:18px; font-weight:600; width:64px; flex:none; }
   .appt-main{ flex:1; min-width:180px; }
   .appt-client{ font-weight:600; }
   .appt-service{ font-size:13px; color:var(--ink-dim); }
@@ -288,7 +288,7 @@
   .stat-grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:12px; margin-bottom:22px; }
   .stat-tile{ background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); padding:16px 18px; }
   .stat-tile .label{ font-size:12px; color:var(--ink-faint); font-weight:600; text-transform:uppercase; letter-spacing:0.04em; }
-  .stat-tile .value{ font-family:"Fraunces",serif; font-size:26px; font-weight:600; margin-top:4px; }
+  .stat-tile .value{ font-family:"Cinzel",serif; font-size:26px; font-weight:600; margin-top:4px; }
   .stat-tile.success .value{ color:var(--success); }
   .stat-tile.danger .value{ color:var(--danger); }
   .stat-tile.warn .value{ color:var(--warning); }
@@ -1064,7 +1064,7 @@
     const upcoming = upcomingAppointments();
     const upcomingBlock = upcoming.length ? `
       <div style="margin-top:28px;">
-        <h3 style="font-size:13px;color:var(--ink-dim);margin:0 0 10px;font-family:'Work Sans',sans-serif;font-weight:600;text-transform:uppercase;letter-spacing:0.03em;">Próximos agendamentos</h3>
+        <h3 style="font-size:13px;color:var(--ink-dim);margin:0 0 10px;font-family:'Montserrat',sans-serif;font-weight:600;text-transform:uppercase;letter-spacing:0.03em;">Próximos agendamentos</h3>
         <div class="card" style="overflow:hidden;">
           ${upcoming.map(a => `
             <div class="tx-row divider-row" style="cursor:pointer;" data-jump-date="${a.date}">
@@ -1203,7 +1203,7 @@
 
     const finishedBlock = finished.length ? `
       <div style="margin-top:28px;">
-        <h3 style="font-size:13px;color:var(--ink-dim);margin:0 0 10px;font-family:'Work Sans',sans-serif;font-weight:600;text-transform:uppercase;letter-spacing:0.03em;">Finalizados</h3>
+        <h3 style="font-size:13px;color:var(--ink-dim);margin:0 0 10px;font-family:'Montserrat',sans-serif;font-weight:600;text-transform:uppercase;letter-spacing:0.03em;">Finalizados</h3>
         <div class="row-list">${finished.map(rowHTML).join('')}</div>
       </div>` : '';
 
@@ -1421,7 +1421,7 @@
 
     const finishedBlock = finished.length ? `
       <div style="margin-top:28px;">
-        <h3 style="font-size:13px;color:var(--ink-dim);margin:0 0 10px;font-family:'Work Sans',sans-serif;font-weight:600;text-transform:uppercase;letter-spacing:0.03em;">Finalizados</h3>
+        <h3 style="font-size:13px;color:var(--ink-dim);margin:0 0 10px;font-family:'Montserrat',sans-serif;font-weight:600;text-transform:uppercase;letter-spacing:0.03em;">Finalizados</h3>
         <div class="row-list">${finished.map(rowHTML).join('')}</div>
       </div>` : '';
 
@@ -1523,7 +1523,7 @@
     const multiClients = Object.entries(byClient).filter(([,v]) => v.count > 1).sort((a,b) => b[1].total - a[1].total);
     const consolidatedBlock = multiClients.length ? `
       <div style="margin-top:4px;margin-bottom:14px;">
-        <h3 style="font-size:13px;color:var(--ink-dim);margin:0 0 10px;font-family:'Work Sans',sans-serif;font-weight:600;text-transform:uppercase;letter-spacing:0.03em;">Total por cliente (mais de uma pendência)</h3>
+        <h3 style="font-size:13px;color:var(--ink-dim);margin:0 0 10px;font-family:'Montserrat',sans-serif;font-weight:600;text-transform:uppercase;letter-spacing:0.03em;">Total por cliente (mais de uma pendência)</h3>
         <div class="card" style="overflow:hidden;">
           ${multiClients.map(([name,v]) => `
             <div class="tx-row divider-row">
@@ -1551,7 +1551,7 @@
     return `
       ${consolidatedBlock}
       <div style="margin-top:4px;margin-bottom:24px;">
-        <h3 style="font-size:13px;color:var(--ink-dim);margin:0 0 10px;font-family:'Work Sans',sans-serif;font-weight:600;text-transform:uppercase;letter-spacing:0.03em;">A receber</h3>
+        <h3 style="font-size:13px;color:var(--ink-dim);margin:0 0 10px;font-family:'Montserrat',sans-serif;font-weight:600;text-transform:uppercase;letter-spacing:0.03em;">A receber</h3>
         <div class="card" style="overflow:hidden;">${rows}</div>
       </div>`;
   }
